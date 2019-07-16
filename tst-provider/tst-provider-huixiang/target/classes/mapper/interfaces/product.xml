@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.interfaces.ProductDao">
+	<select id="getMemberShopDetail" parameterType="shopBean" resultType="shopBean">
+		select a.*
+		from tst_shop as a
+		where a.is_delete='0' and a.member_id=#{member_id}
+	</select>
+	
+	<insert id="insertShop" parameterType="shopBean" useGeneratedKeys="true" keyProperty="shop_id">
+		insert into tst_shop
+		(member_id,shop_name,shop_img,shop_address,
+		shop_account,shop_phone,create_time,update_time)
+		values
+		(#{member_id},#{shop_name},#{shop_img},#{shop_address},
+		#{shop_account},#{shop_phone},now(),now())
+	</insert>
+	
+	
+	<select id="getShopDetail" parameterType="shopBean" resultType="shopBean">
+		select a.*,(case when b.member_collection_id is null then 0 else 1 end)is_collection 
+		,(select count(*) from tst_collection where collection_id=a.shop_id and is_delete='0' and collection_type='2')collection_count
+		
+		from tst_shop as a
+		left join tst_collection as b
+		on a.shop_id=b.collection_id and b.is_delete='0' and b.collection_type='2' and
+		b.member_id=#{member_id}
+		where a.is_delete='0' and a.shop_id=#{shop_id}
+	</select>
+	
+	<select id="getProductCount" parameterType="productBean" resultType="int">
+		select count(*) from tst_product
+		where is_delete='0' and product_state='1'
+	</select>
+	
+	<select id="getShopAddProducts" parameterType="shopProductBean" resultType="productBean">
+		select a.* from tst_product as a
+		left join tst_shop_product as b
+		on a.product_id=b.product_id and b.is_delete='0' and b.shop_id=#{shop_id}
+		where a.is_delete='0' and a.product_state='1' 
+		and a.product_way='1'
+		and b.shop_product_id is null
+		<if test=' product_name != null and product_name != "" '>
+			and a.product_name like concat('%',#{product_name},'%')
+		</if>
+	</select>
+	
+	<select id="getShopProducts" parameterType="shopProductBean" resultType="productBean">
+		select b.* from tst_shop_product as a 
+		inner join tst_product as b
+		on a.product_id=b.product_id and b.is_delete='0' and b.product_state='1'
+		and b.product_way='1'
+		where a.shop_id=#{shop_id} and a.is_delete='0'
+	</select>
+
+	<select id="getShopProductDetail" parameterType="shopProductBean" resultType="shopProductBean">
+		select * from tst_shop_product
+		where member_id=#{member_id} and 
+		shop_id=#{shop_id} and product_id=#{product_id}
+	</select>
+	
+	<insert id="insertShopProduct" parameterType="shopProductBean">
+		insert into tst_shop_product
+		(member_id,shop_id,product_id,
+		create_time,update_time)
+		values
+		(#{member_id},#{shop_id},#{product_id},
+		now(),now())
+	</insert>
+	
+	<update id="updateShopProduct" parameterType="shopProductBean">
+		update tst_shop_product
+		set update_time=now(),is_delete=(case when is_delete='1' then '0' else '1' end)
+		where shop_product_id=#{shop_product_id}
+	</update>
+	
+	<select id="getFootprints" parameterType="footprintBean" resultType="productBean">
+		select b.*,MAX(a.create_time) sort_time from tst_footprint as a
+		inner join tst_product as b
+		on a.product_id=b.product_id and b.is_delete='0' and b.product_state='1'
+		where a.member_id=#{member_id} and a.is_delete='0'
+		group by a.product_id
+		
+		order by sort_time desc
+	</select>
+	
+	<insert id="insertFootprint" parameterType="footprintBean">
+		insert into tst_footprint
+		(member_id,product_id,
+		create_time,update_time)
+		values
+		(#{member_id},#{product_id},
+		now(),now())
+	</insert>
+	
+	<select id="getProductAssessments" parameterType="orderAssessmentBean" resultType="orderAssessmentBean">
+		select a.*,b.member_nick_name,b.member_img from tst_order_assessment as a
+		inner join tst_member as b
+		on a.member_id = b.member_id
+		where a.product_id=#{product_id} and a.is_delete='0'
+	</select>
+
+
+
+	<resultMap id="classList" type="productClassBean">
+		<result column="class_id" property="class_id" />
+		<result column="class_name" property="class_name" />
+		<result column="class_img" property="class_img" />
+		<result column="class_type" property="class_type" />
+		<result column="class_uuid" property="class_uuid" />
+		<result column="parent_id" property="parent_id" />
+		<result column="sort" property="sort" />
+		<result column="class_img" property="class_img" />
+		<association property="productClassBeans" resultMap="classList2">
+		</association>
+	</resultMap>
+
+	<resultMap id="classList2" type="productClassBean">
+		<result column="class_id2" property="class_id" />
+		<result column="class_name2" property="class_name" />
+		<result column="class_img2" property="class_img" />
+		<result column="parent_id2" property="parent_id" />
+		<result column="class_type2" property="class_type" />
+		<result column="class_uuid2" property="class_uuid" />
+		<result column="sort2" property="sort" />
+		<result column="class_img2" property="class_img" />
+	</resultMap>
+	
+	<select id="getProductClasss" parameterType="productClassBean"
+		resultMap="classList">
+		select
+		a.class_id,a.class_name,a.parent_id,a.sort,a.class_img,a.class_uuid,
+		a.class_img,
+		b.class_id as class_id2,b.class_name as class_name2,b.parent_id as
+		parent_id2,b.sort as sort2,b.class_img as class_img2,b.class_uuid as class_uuid2,
+		b.class_img class_img2
+		from tst_product_class as a
+
+		inner join tst_product_class as b
+		on b.parent_id=a.class_id and b.is_delete='0' and b.class_state='1'
+		where a.parent_id='-1' and a.is_delete='0' and a.class_state='1'
+	</select>
+	<select id="getProductParentClass" parameterType="productBean"
+		resultType="Map">
+		select parent_id  from tst_product_class where class_id = #{class_id}
+	</select>
+	
+	
+	<select id="getProductSpecifications" parameterType="productSpecificationBean" resultType="productSpecificationBean">
+		select * from tst_product_specification
+		where product_id=#{product_id} and is_delete='0'
+	</select>
+	
+	<select id="getProductServices" parameterType="serviceBean" resultType="serviceBean">
+		select * from tst_service
+		where FIND_IN_SET(service_id,#{service_ids}) and is_delete='0'
+	</select>
+
+	<select id="getProductDetail" parameterType="productBean" resultType="productBean">
+        select a.*,
+        (case when b.freight_way='2' or b.freight_way is null then "免邮" else concat('¥',b.freight_price) end) freight_name 
+        ,(case when c.member_collection_id is null then 0 else 1 end)is_collection
+        from tst_product as a
+		left join tst_freight as b
+		on a.freight_id=b.freight_id 
+		left join tst_collection as c
+		on a.product_id=c.collection_id and c.is_delete='0' and c.collection_type='1'
+		 and c.member_id=#{member_id}
+		where a.is_delete = '0' and a.product_id = #{product_id}
+    </select>
+
+    <select id="getProducts" parameterType="productBean" resultType="productBean">
+        select a.* from tst_product as a 
+        inner join tst_product_class as b
+        on a.class_id=b.class_id and b.is_delete='0' and b.class_state='1'
+		inner join tst_product_class as c
+        on b.parent_id=c.class_id and c.is_delete='0' and c.class_state='1'
+        where a.is_delete ='0' and a.product_state='1' and a.product_way='1'
+        <if test=' product_name != null and product_name != "" '>
+            and a.product_name like concat('%',#{product_name},'%')
+        </if>
+        <if test=' is_recommand != null and is_recommand != "" '>
+            and a.is_recommand=#{is_recommand}
+        </if>
+        <if test=' is_group != null and is_group != "" '>
+            and a.is_group=#{is_group}
+        </if>
+        <if test=' is_promotion != null and is_promotion != "" '>
+            and a.is_promotion=#{is_promotion}
+        </if>
+        <if test=' product_type != null and product_type != "" '>
+            and a.product_type=#{product_type}
+        </if>
+        <if test=' class_uuid != null and class_uuid != "" '>
+            and a.class_parent_uuid like concat('%',#{class_uuid},'%')
+        </if>
+        order by sort desc
+    </select>
+     <select id="getProductsByRecommand" parameterType="productBean" resultType="productBean">
+        select a.* from tst_product as a 
+        inner join tst_product_class as b
+        on a.class_id=b.class_id and b.is_delete='0' and b.class_state='1'
+		inner join tst_product_class as c
+        on b.parent_id=c.class_id and c.is_delete='0' and c.class_state='1'
+        where a.is_delete ='0' and a.product_state='1' and a.product_way='1' and a.is_recommand = '1'
+       
+        <if test=' product_type != null and product_type != "" '>
+            and a.product_type=#{product_type}
+        </if>
+        <if test=' class_uuid != null and class_uuid != "" '>
+            and a.class_parent_uuid like concat('%',#{class_uuid},'%')
+        </if>
+        order by sort desc limit 0,6
+    </select>
+	<select id="getProductsByHot" parameterType="productBean" resultType="productBean">
+        select a.* from tst_product as a 
+        inner join tst_product_class as b
+        on a.class_id=b.class_id and b.is_delete='0' and b.class_state='1'
+		inner join tst_product_class as c
+        on b.parent_id=c.class_id and c.is_delete='0' and c.class_state='1'
+        where a.is_delete ='0' and a.product_state='1' and a.product_way='1' 
+       
+        <if test=' product_type != null and product_type != "" '>
+            and a.product_type=#{product_type}
+        </if>
+        <if test=' class_uuid != null and class_uuid != "" '>
+            and a.class_parent_uuid like concat('%',#{class_uuid},'%')
+        </if>
+        order by product_sales desc limit 0,3
+    </select>
+
+ 	<select id="getProductsByMemberOrder" parameterType="orderMerchantsBean" resultType="orderProductBean">
+ 		select b.*,
+ 		(case when c.challenge_id != '' then 1 else 0 end ) as is_challenge
+ 		 from tst_order_merchants as a 
+		inner join tst_order_product as b 
+ 		on a.order_merchants_id = b.order_merchants_id 
+		and b.is_delete ='0'
+		left join tst_member_challenge as c 
+ 		on c.product_id = b.product_id   
+ 		<if test=' member_id  != null and member_id != "" '>
+            and c.member_id =#{member_id}
+        </if>
+ 		where  a.is_delete =0  and a.order_type ='app'
+ 		and (a.order_state !='cancel' and a.order_state != 'wait_pay')
+ 		<if test=' member_id  != null and member_id != "" '>
+            and a.member_id =#{member_id}
+        </if>
+ 		
+        
+       
+        order by b.create_time desc
+    </select>
+	
+</mapper>
+
+

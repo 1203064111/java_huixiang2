@@ -1,0 +1,713 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.interfaces.OrderDao">
+	
+	<select id="getHaiguanOrders" parameterType="orderMerchantsBean" resultType="Map">
+		select concat(d.address_province,d.address_city,d.address_country,d.address_detailed)address_detailed,
+		a.member_id,a.order_merchants_no,a.product_total_price,a.order_actual_price,
+		a.freight_price,a.order_merchants_id,
+		b.realname_name,b.realname_mobile,b.realname_card,
+		e.pay_way,e.trade_no
+		from tst_order_merchants as a
+		inner join tst_member_realname as b
+		on a.member_id=b.member_id and b.is_delete='0' and b.realname_state!='3'
+		inner join tst_order_address as d
+		on a.order_id=d.order_id 
+		inner join tst_order as e
+		on a.order_id=e.order_id and e.order_state='end'
+		where a.is_cross_border='1' 
+		<if test=' order_id != null and order_id != "" '>
+		 	and a.order_id=#{order_id} 
+		</if>
+		
+		<if test=' order_merchants_id != null and order_merchants_id != "" '>
+		 	and a.order_merchants_id=#{order_merchants_id} 
+		</if>
+	</select>
+	
+	<select id="getHaiguanOrderGoodss" parameterType="orderBean" resultType="Map">
+		select b.record_sku as SKU,b.record_goods_specification GOODS_SPEC,
+		'142' as CURRENCY_CODE,c.batch_price PRICE,
+		a.goods_num QTY,a.goods_num*c.batch_price GOODS_FEE2,
+		b.record_goods_name GOODS_NAME,
+		b.record_country_code as COUNTRY,a.goods_id G_NUM,
+		
+		b.record_barcode as BAR_CODE,b.record_the_notification UNIT_CODE
+		
+		,b.record_hs_code HS_CODE,b.record_reduced_num
+		from tst_order_product_goods as a
+
+		inner join tst_record as b
+		on a.goods_sku=b.record_sku and b.is_delete='0'
+
+		inner join tst_order_product_batch as c
+		on a.order_product_goods_id=c.order_product_goods_id
+
+		where a.order_merchants_id=#{order_merchants_id}
+	</select>
+	
+	<select id="getOrderPayDetail" parameterType="orderBean" resultType="orderBean">
+		select * from tst_order_pay
+		where out_trade_no=#{out_trade_no} and is_delete='0'
+	</select>
+	<insert id="insertOrderPay" parameterType="orderBean">
+		insert into tst_order_pay
+		(order_id,pay_way,pay_charge,
+		out_trade_no,create_time,update_time)
+		values
+		(#{order_id},#{pay_way},#{pay_charge},
+		#{out_trade_no},now(),now())
+	</insert>
+
+	<select id="getDeivceSales" parameterType="deviceBean" resultType="Map">
+		select a.order_merchants_no,b.product_name,b.specification_img,b.specification_price,DATE_FORMAT(a.create_time, '%Y-%m-%d %H:%i' )create_time,
+		a.is_shipment from tst_order_merchants as a
+		inner join tst_order_product as b
+		on a.order_merchants_id=b.order_merchants_id
+		where a.device_no=#{device_no} and a.order_type='device' and a.order_state != 'cancel' and a.order_state != 'wait_pay' 
+		order by a.create_time desc
+	</select>
+
+	<select id="getOrderLogisticsDetails" parameterType="orderLogisticsDetailBean" resultType="orderLogisticsDetailBean">
+		select * from tst_order_logistics_detail
+		where logistics_no=#{logistics_no} and is_delete='0'
+		order by logistics_time desc
+	</select>
+	
+	<select id="getOrderLogistics" parameterType="orderLogisticsBean" resultType="orderLogisticsBean">
+		select a.*,b.order_merchants_no from tst_order_logistics as a
+		inner join tst_order_merchants as b
+		on a.order_merchants_id=b.order_merchants_id
+		where a.is_delete='0' and a.order_merchants_id=#{order_merchants_id}
+	</select>
+	
+	
+	<update id="updateOrderLogistics" parameterType="orderLogisticsBean">
+		update tst_order_logistics
+		set update_time=now(),
+		logistics_state=#{logistics_state}
+		where logistics_order_id=#{logistics_order_id}
+	</update>
+	
+	<insert id="insertOrderLogisticsDetails" parameterType="List">	
+		insert into tst_order_logistics_detail
+		(logistics_no,logistics_state,logistics_time,logistics_context,create_time,update_time)
+		values
+		<foreach collection="list" item="item" index="index" separator=",">
+			(#{item.logistics_no},#{item.logistics_state},#{item.logistics_time},#{item.logistics_context},now(),now())
+		</foreach>
+	</insert>
+	
+	<select id="getLogisticsCount" parameterType="orderLogisticsBean" resultType="int">
+		select count(*) from tst_order_logistics_detail
+		where logistics_no=#{logistics_no} and is_delete='0'
+	</select>
+	
+	<select id="getLogisticsOrders" resultType="Map">
+		select a.logistics_order_id,a.logistics_no,a.logistics_pinyin,a.order_id,a.order_merchants_id,b.order_state 
+		from tst_order_logistics as a
+		inner join tst_order_merchants as b
+		on a.order_merchants_id=b.order_merchants_id 
+		
+		where a.logistics_state != "3"
+	</select>
+	
+	<select id="getCancelOrders" resultType="Map">
+		select order_id,member_id from tst_order
+		where order_state='wait_pay' and now()>pay_end_time and is_delete='0'
+	</select>
+	
+	<update id="timingCancelGroupOrder" parameterType="orderMerchantsBean">
+		update tst_order_merchants as a
+		inner join tst_order as b
+		on a.order_id=b.order_id
+		inner join tst_order_group as c
+		on a.order_group_id=c.order_group_id
+		set a.cancel_time=now(),a.order_state='cancel',
+		a.group_state='3',
+		b.order_state='cencel',b.group_state='3',
+		c.group_state='3'
+		where order_merchants_id=#{order_merchants_id}
+	</update>
+	
+	<update id="cancelProductSales" parameterType="orderMerchantsBean">
+		update tst_order_product as a
+		inner join tst_product as b
+		on a.product_id=b.product_id
+		inner join tst_product_specification as c
+		on a.specification_id=c.specification_id
+		set b.product_sales=b.product_sales-
+		(select sum(product_count)from tst_order_product where 1=1 
+			and order_merchants_id=#{order_merchants_id}
+		)
+		,c.specification_sales=c.specification_sales-(select sum(product_count)from tst_order_product where 1=1 
+			and order_merchants_id=#{order_merchants_id}
+		)
+		where a.is_delete='0' and a.order_merchants_id=#{order_merchants_id}
+	</update>
+	
+	<select id="getCancelGroupOrders" resultType="Map">
+		select b.member_id,a.order_group_id,b.order_merchants_id,b.order_actual_price,c.pay_way,
+		c.out_trade_no from tst_order_group as a
+		inner join tst_order_merchants as b
+		on a.order_group_id=b.order_group_id and b.is_delete='0' and b.order_state='wait_send'
+		inner join tst_order as c
+		on b.order_id=c.order_id 
+		where a.is_delete='0' and a.group_state='1' and now()>a.end_time
+	</select>
+	
+	<update id='updateDeviceReplenishmentBatch' parameterType='deviceReplenishmentBatchBean'>
+		update tst_device_replenishment_batch
+		set update_time=now(),
+		batch_now_stock=batch_now_stock-1
+		where replenishment_batch_id=#{replenishment_batch_id} and (batch_now_stock-1)>=0
+	</update>
+	
+	<insert id='insertOrderProductBatch' parameterType='orderProductBatchBean'>
+		insert into tst_order_product_batch
+		(order_product_goods_id,order_id,
+		order_merchants_id,order_product_id,goods_id,
+		batch_id,purchase_id,batch_no,batch_price,batch_stock,
+		batch_now_stock,replenishment_batch_id,create_time,update_time)
+		
+		select order_product_goods_id,order_id,
+		order_merchants_id,order_product_id,goods_id,
+		#{batch_id},#{purchase_id},#{batch_no},#{batch_price},#{batch_stock},
+		#{batch_now_stock},#{replenishment_batch_id},now(),now() 
+		from tst_order_product_goods
+		where order_id=#{order_id}
+	</insert>
+	
+	<select id='getDeviceReplenishmentBatch' parameterType='orderBean' resultType='deviceReplenishmentBatchBean'> 
+		select b.* from tst_order_product as a
+		inner join tst_device_replenishment_batch as b
+		on a.product_id=b.product_id and b.device_no=#{device_no} and b.cargo_no=#{cargo_no} 
+		and b.is_delete='0' and b.batch_now_stock>0
+		where a.order_id=#{order_id}
+		limit 0,1
+	</select>
+	
+	<update id="updateDeviceCargoStock" parameterType="deviceCargoBean">
+		update tst_order as a
+		inner join tst_device_cargo as b
+		on a.cargo_no=b.cargo_no  and b.is_delete='0'
+		inner join tst_device as d
+		on b.device_id=d.device_id and d.device_no=a.device_no and d.is_delete='0'
+		inner join tst_order_product as c
+		on a.order_id=c.order_id 
+		set b.update_time=now()
+		,b.product_stock=b.product_stock-c.product_count
+		where a.order_id=#{order_id}
+	</update>
+
+	<select id="getDeviceCargoDetail" parameterType="deviceCargoBean" resultType="deviceCargoBean">
+		select a.* from tst_device_cargo as a
+		inner join tst_device as b
+		on a.device_id=b.device_id and b.device_no=#{device_id}  and b.is_delete='0'
+		where  a.cargo_no=#{cargo_no} and a.is_delete='0'
+	</select>
+	
+	<select id="getOrderGroupDetail" parameterType="orderGroupBean" resultType="Map">
+		select a.order_group_id,a.create_time,a.member_id,a.need_count,a.now_count,a.group_state,a.end_time,b.product_name,b.product_img,
+		b.group_min_price,b.product_now_min_price,(b.product_now_min_price-b.group_min_price)save_price 
+		
+		from tst_order_group as a 
+		inner join tst_product as b
+		on a.product_id=b.product_id 
+		where a.order_group_id=#{order_group_id} and a.is_delete='0'
+	</select>
+	
+	<select id="getOrderGroupMembers" parameterType="orderGroupBean" resultType="Map">
+		select b.member_nick_name,b.member_img 
+		,(case when b.member_id=#{member_id} then 1 else 0 end)is_admin
+		from tst_order as a 
+		inner join tst_member as b
+		on a.member_id=b.member_id 
+		where a.order_group_id=#{order_group_id} and a.order_state='end' 
+	</select>
+	
+	<select id="getOrderGroups" parameterType="orderGroupBean" resultType="Map">
+		select a.order_actual_price,
+			(case when a.order_state='cancel' then a.order_id else a.order_merchants_id end) order_id,
+			(case when a.order_state='cancel' then a.order_no else a.order_merchants_no end) order_no,
+			a.order_state,
+			a.merchants_id,
+			a.merchants_name,a.create_time,a.group_state,
+			b.order_group_id,b.need_count,b.now_count
+		from tst_order_merchants as a
+		inner join tst_order_group as b
+		on a.order_group_id=b.order_group_id
+		where a.member_id=#{member_id} and a.order_type='group'
+		and a.order_state != 'wait_pay'  and a.group_state != 0
+		<if test=' group_state != null and group_state != "" '>
+			and a.group_state=#{group_state}
+		</if> 
+		order by create_time desc
+	</select>
+	
+	
+	<select id="getProductGroups" parameterType="orderGroupBean" resultType="Map">
+		select DATE_FORMAT(a.create_time, '%Y-%m-%d %H:%i' )create_time,b.member_id,
+		IFNULL(b.member_nick_name,"")member_nick_name,IFNULL(b.member_img,"")member_img,
+		a.order_group_id,a.need_count,a.now_count,
+		IFNULL(a.end_time,"")end_time
+		from tst_order_group as a
+		inner join tst_member as b
+		on a.member_id=b.member_id
+		where a.is_delete='0' and a.product_id=#{product_id} and a.group_state='1'
+	</select>
+	
+	<update id="updateOrderGroup" parameterType="orderGroupBean">
+		update tst_order_group as a
+		inner join tst_order as b
+		on a.order_group_id=b.order_group_id and b.order_state='end'
+		
+		inner join tst_order_merchants as c
+		on a.order_group_id=c.order_group_id and c.order_state='wait_send'
+		
+		set a.group_state=(case when a.now_count+1>=a.need_count then 2 else 1 end)
+		,b.group_state=a.group_state
+		,c.group_state=a.group_state
+		,a.now_count=a.now_count+1
+		,a.end_time=(case when a.end_time is null then  ADDDATE(now(),interval a.need_time hour) else a.end_time end)
+		where a.order_group_id=#{order_group_id} 
+	</update>
+	
+	<insert id="insertOrderGroup" parameterType="orderGroupBean" useGeneratedKeys="true" keyProperty="order_group_id">
+		insert into tst_order_group
+		(member_id,product_id,need_count,need_time,create_time,update_time)
+		values
+		(#{member_id},#{product_id},IFNULL(#{need_count},"2"),IFNULL(#{need_time},"24"),now(),now())
+	</insert>
+	
+	<select id="getOrderAssessmentDetail" parameterType="orderAssessmentBean" resultType="orderAssessmentBean">
+		select a.*,b.member_nick_name,b.member_img from tst_order_assessment as a
+		inner join tst_member as b
+		on a.member_id = b.member_id
+		where a.order_product_id=#{order_product_id} and a.is_delete='0'
+	</select>
+	
+	<update id="assessmentProduct" parameterType="orderAssessmentBean">
+		update tst_order_product as a
+		inner join tst_order_merchants as b
+		on a.order_merchants_id=b.order_merchants_id
+		set a.update_time=now(),
+		a.is_assessment='1',
+		b.order_state=(case when 
+		(select count(*) from(select * from tst_order_product 
+		where is_assessment='0' and order_product_id != #{order_product_id}) as t where order_merchants_id=b.order_merchants_id)>0 
+		then b.order_state else 'end' end)
+		where order_product_id=#{order_product_id}
+	</update>
+	
+	<insert id="insertOrderAssessement" parameterType="orderAssessmentBean">
+		insert into tst_order_assessment
+		(member_id,order_merchants_id,order_product_id,product_id,
+		assessment_desc,assessment_imgs,assessment_type,assessment_star1,assessment_star2,
+		assessment_star3,create_time,update_time)
+		select #{member_id},order_merchants_id,order_product_id,product_id,
+		#{assessment_desc},#{assessment_imgs},'product',#{assessment_star1},#{assessment_star2},
+		#{assessment_star3},now(),now()
+		from tst_order_product where order_product_id=#{order_product_id}
+	</insert>
+	
+	<select id="getAssessmentProducts" parameterType="orderBean" resultType="orderProductBean">
+		select b.*
+		
+		 from tst_order_merchants as a
+		inner join tst_order_product as b
+		on a.order_merchants_id=b.order_merchants_id
+		and b.is_delete='0' 
+		where a.member_id=#{member_id} and a.is_delete='0' and FIND_IN_SET(a.order_state,'wait_assessment,end')
+		<if test=' order_id != null and order_id != "" '>
+			and a.order_merchants_id=#{order_id}
+		</if>
+		order by create_time desc
+	</select>
+	
+	<update id="deleteOrder" parameterType="orderBean">
+		<if test=' order_state=="wait_pay" or order_state== "cancel" '>
+			update tst_order_merchants a , tst_order b 
+			set a.is_delete = '1' , b.is_delete = '1'  
+			where a.order_id = b.order_id 
+			and a.order_id = #{order_id}
+		</if>
+		<if test=' order_state!="wait_pay" and order_state!= "cancel" '>
+			update tst_order_merchants 
+			set update_time = now()
+			, is_delete = 1
+			where order_merchants_id = #{order_id}
+		</if>
+	</update>
+
+	<update id="receiveOrder" parameterType="orderMerchantsBean">
+		update tst_order_merchants
+		set order_state='wait_assessment',receive_time=now()
+		where order_merchants_id=#{order_merchants_id} and member_id=#{member_id}
+	</update>
+	
+	<select id="getOrderMerchantsDetail" parameterType="orderMerchantsBean" resultType="orderMerchantsBean">
+		select * from tst_order_merchants
+		
+		where is_delete='0' and order_merchants_id=#{order_merchants_id}
+	</select>
+	
+	<update id="cancelProductStock" parameterType="orderMerchantsBean">
+		update tst_order_product as a
+		
+		inner join tst_product as b
+		on a.product_id=b.product_id
+		
+		inner join tst_product_specification as c
+		on a.specification_id=c.specification_id
+		set b.product_stock=b.product_stock+(
+		
+		select sum(product_count)from tst_order_product
+		where 1=1 
+		<if test=' order_id != null and order_id != "" '>
+			and order_id=#{order_id}
+		</if>
+		<if test=' order_merchants_id != null and order_merchants_id != "" '>
+			and order_merchants_id=#{order_merchants_id}
+		</if>
+		)
+		,c.specification_stock=c.specification_stock+a.product_count
+		where a.is_delete='0'
+		<if test=' order_id != null and order_id != "" '>
+			and a.order_id=#{order_id}
+		</if>
+		<if test=' order_merchants_id != null and order_merchants_id != "" '>
+			and a.order_merchants_id=#{order_merchants_id}
+		</if>
+	</update>
+	
+	<update id="cancelOrder" parameterType="orderBean">
+		update tst_order
+		set cancel_time=now(),order_state='cancel'
+	
+		where order_id=#{order_id} and member_id=#{member_id}
+	</update>
+	
+	<update id="cancelOrderMerchants" parameterType="orderMerchantsBean">
+		update tst_order_merchants
+		set cancel_time=now(),order_state='cancel'
+		where member_id=#{member_id} and order_id=#{order_id}
+	</update>
+	
+	<select id="getOrderAddressDetail" parameterType="orderAddressBean" resultType="orderAddressBean">
+		select * from tst_order_address
+		where order_id=#{order_id}
+	</select>
+	<select id="getOrderMap" parameterType="orderBean" resultType="Map">
+		<if test=' order_state=="wait_pay" or order_state== "cancel" '>
+			select order_id,order_state,
+			order_no,
+			DATE_FORMAT(create_time, '%Y-%m-%d %H:%i' )create_time
+			,"" pay_time
+			,"" send_time
+			,"" receive_time,
+			freight_price,product_total_price,taxation_price,IFNULL(order_remark,"")order_remark,
+			order_actual_price,pay_end_time,order_type,order_group_id
+			from tst_order
+			where order_id=#{order_id}
+		</if>
+		<if test=' order_state!="wait_pay" and order_state!= "cancel" '>
+			select order_merchants_id as order_id, order_state,order_id order_id2,
+			order_merchants_no as order_no,
+			DATE_FORMAT(create_time, '%Y-%m-%d %H:%i' )create_time
+			,IFNULL(DATE_FORMAT(pay_time, '%Y-%m-%d %H:%i'),"")pay_time
+			,IFNULL(DATE_FORMAT(send_time, '%Y-%m-%d %H:%i'),"")send_time
+			,IFNULL(DATE_FORMAT(receive_time, '%Y-%m-%d %H:%i'),"")receive_time,
+			freight_price,product_total_price,taxation_price,IFNULL(order_remark,"")order_remark,
+			order_actual_price,order_type,order_group_id
+			from tst_order_merchants
+			where order_merchants_id=#{order_id}
+		</if>
+	</select>
+
+	<select id="getOrderProducts" parameterType="orderProductBean" resultType="orderProductBean">
+		select a.*,(case when c.challenge_id != '' then 1 else 0 end ) as is_challenge 
+		from tst_order_product as a 
+		left join tst_member_challenge as c 
+		on c.product_id = a.product_id 
+		<if test=' member_id  != null and member_id != "" '>
+            and c.member_id =#{member_id}
+        </if>
+		where a.is_delete='0'
+		<if test=' order_id != null and order_id != "" '>
+			and a.order_id=#{order_id}
+		</if>
+		<if test=' order_merchants_id != null and order_merchants_id != "" '>
+			and a.order_merchants_id=#{order_merchants_id}
+		</if>
+		group by a.order_product_id desc
+	</select>
+	<select id="getOrders" parameterType="orderBean" resultType="Map">
+		select * from (
+			select 
+			(case when FIND_IN_SET(b.order_state,'wait_pay,cancel') then b.order_actual_price else a.order_actual_price end) order_actual_price,
+			(case when FIND_IN_SET(b.order_state,'wait_pay,cancel') then b.order_id else a.order_merchants_id end) order_id,
+			(case when FIND_IN_SET(b.order_state,'wait_pay,cancel') then b.order_no else a.order_merchants_no end) order_no,
+			(case when FIND_IN_SET(b.order_state,'wait_pay,cancel') then b.order_state else a.order_state end) order_state,
+			(case when FIND_IN_SET(b.order_state,'wait_pay,cancel') then "-1" else a.merchants_id end) merchants_id,
+			(case when FIND_IN_SET(b.order_state,'wait_pay,cancel') then "荟享" else a.merchants_name end) merchants_name
+			,a.create_time,b.pay_end_time,a.order_type,a.group_state
+			from tst_order_merchants as a
+			inner join tst_order as b
+			on a.order_id=b.order_id and b.is_delete='0' 
+			where a.member_id=#{member_id} and a.is_delete='0'
+		
+			group by order_no
+		) as a
+		where ((order_type='group' and group_state='2') or order_type!='group')
+		<if test=' order_state != null and order_state != "" '>
+			and FIND_IN_SET(order_state,#{order_state})
+		</if>
+		order by create_time desc
+	</select>
+
+
+	<select id="getOrderDetail" parameterType="orderBean" resultType="orderBean">
+		select * from tst_order
+		where is_delete='0' 
+		<if test=' order_id != null and order_id != "" '>
+			and order_id=#{order_id}
+		</if>
+		<if test=' order_no != null and order_no != "" '>
+			and order_no=#{order_no}
+		</if>
+		<if test=' out_trade_no != null and out_trade_no != "" '>
+			and out_trade_no=#{out_trade_no}
+		</if>
+	</select>
+
+	<update id="updateProductSales" parameterType="orderBean">
+		update tst_order_product as a
+		inner join tst_product as b
+		on a.product_id=b.product_id
+		
+		inner join tst_product_specification as c
+		on a.specification_id=c.specification_id
+		
+		set b.product_sales=b.product_sales+(select sum(product_count)from tst_order_product where order_id=#{order_id})
+		,c.specification_sales=c.specification_sales+(select sum(product_count)from tst_order_product where order_id=#{order_id})
+				
+		where a.order_id=#{order_id}
+	</update>
+	
+	<update id="payOrder" parameterType="orderBean">
+		update tst_order
+		set pay_time=now(),order_state='end'
+		,trade_no=#{trade_no}
+		<if test=' pay_way != null and pay_way != "" '>
+			,pay_way=#{pay_way}
+		</if>
+		where order_id=#{order_id} and member_id=#{member_id}
+	</update>
+	
+	<update id="payOrderMerchants" parameterType="orderMerchantsBean">
+		update tst_order_merchants
+		set pay_time=now(),
+		order_state=#{order_state}
+		<if test=' order_state == "end" '>
+			,send_time=now(),receive_time=now(),assessment_time=now()
+		</if>
+		<if test=' pay_way != null and pay_way != "" '>
+			,pay_way=#{pay_way}
+		</if>
+		where member_id=#{member_id} and order_id=#{order_id}
+	</update>
+	
+	<update id="payRealOrderMerchants" parameterType="orderMerchantsBean">
+		update tst_order_merchants
+		set update_time=now(),
+		pay_way=#{pay_way}
+		where order_id=#{order_id}
+	</update>
+	
+	
+	<update id="updateProductStock" parameterType="productSpecificationBean">
+		update tst_product_specification as a 
+		inner join tst_product as b
+		on a.product_id=b.product_id
+		set a.update_time=now(),
+		b.update_time=now(),
+		a.specification_stock=a.specification_stock-#{specification_stock},
+		b.product_stock=b.product_stock-#{specification_stock}
+		where a.specification_id=#{specification_id} and (a.specification_stock-#{specification_stock})>=0
+	</update>
+
+	<insert id="insertOrderProductGoodss" parameterType="orderProductGoodsBean">
+		insert into tst_order_product_goods
+		(order_id,order_merchants_id,order_product_id,goods_id,
+		goods_name,goods_sku,goods_type,goods_num,
+		create_time,update_time)
+		select #{order_id},#{order_merchants_id},#{order_product_id},a.goods_id,
+		b.goods_name,b.goods_sku,b.goods_type,a.goods_num,
+		now(),now()
+		 from tst_product_specification_goods as a
+		 inner join tst_goods as b
+		 on a.goods_id=b.goods_id
+		where a.specification_id=#{specification_id} and a.is_delete='0'
+	</insert>
+	
+	
+	<insert id="insertOrderProduct" parameterType="orderProductBean" useGeneratedKeys="true" keyProperty="order_product_id">
+		insert into tst_order_product
+		(order_id,order_merchants_id,product_id,
+		product_name,product_img,product_weight,product_volume,
+		product_count,specification_id,
+		specification_name,specification_stock,specification_img,specification_price,group_price,profit_price,
+		product_total_price,product_actual_price,freight_id,freight_type,freight_way,
+		freight_range,freight_price,freight_add_range,freight_add_price,free_range,
+		create_time,update_time)
+		values
+		(#{order_id},#{order_merchants_id},#{product_id},
+		#{product_name},#{product_img},#{product_weight},#{product_volume},
+		#{product_count},#{specification_id},
+		#{specification_name},#{specification_stock},#{specification_img},#{specification_price},#{group_price},#{profit_price},
+		#{product_total_price},#{product_actual_price},#{freight_id},#{freight_type},#{freight_way},
+		#{freight_range},#{freight_price},#{freight_add_range},#{freight_add_price},#{free_range},
+		now(),now())
+	</insert>
+
+	<select id="getProductFreightDetail" parameterType="freightCityBean" resultType="Map">
+		select a.freight_id,a.freight_name,a.freight_type,a.freight_way,
+		IFNULL(b.freight_range,a.freight_range)freight_range,IFNULL(b.freight_price,a.freight_price)freight_price,
+		IFNULL(b.freight_add_range,a.freight_add_range)freight_add_range,IFNULL(b.freight_add_price,a.freight_add_price)freight_add_price,
+		c.free_range
+		from tst_freight as a
+		left join tst_freight_city as b
+		on a.freight_id=b.freight_id and b.is_delete='0'
+		and FIND_IN_SET(#{city_names},b.city_names)
+		left join tst_freight_free as c
+		on a.freight_id=c.freight_id and c.is_delete='0'
+		and FIND_IN_SET(#{city_names},c.city_names)
+		where a.freight_id=#{freight_id} and a.is_delete='0'
+	</select>
+	
+	
+	<select id="getProductDetail" parameterType="productBean" resultType="productBean">
+		select * from tst_product
+		where product_id=#{product_id}
+	</select>
+	 
+	<select id="getProductSpecificationDetail" parameterType="productSpecificationBean" resultType="productSpecificationBean">
+		select * from tst_product_specification
+		
+		where specification_id=#{specification_id}
+	</select>
+
+	<insert id="insertOrder" parameterType="orderBean" useGeneratedKeys="true" keyProperty="order_id">
+		insert into tst_order
+		(shop_id,shop_name,device_no,cargo_no,order_no,member_id,order_state,car_ids,order_type,
+		create_time,update_time,
+		pay_end_time)
+		values
+		(IFNULL(#{shop_id},'-1'),#{shop_name},#{device_no},#{cargo_no},#{order_no},#{member_id},#{order_state},#{car_ids},IFNULL(#{order_type},'goods'),
+		now(),now(),
+		(select ADDDATE(now(),interval percent_value minute) from tst_percent where percent_type='wait_pay' and is_delete='0'))
+	</insert>
+	
+	<update id="updateOrder" parameterType="orderBean">
+		update tst_order
+		set update_time=now()
+		<if test=' order_group_id != null and order_group_id != "" '>
+			,order_group_id=#{order_group_id}
+		</if>
+		<if test=' product_total_price != null and product_total_price != "" '>
+			,product_total_price=#{product_total_price}
+		</if>
+		<if test=' order_actual_price != null and order_actual_price != "" '>
+			,order_actual_price=#{order_actual_price}
+		</if>
+		<if test=' profit_price != null and profit_price != "" '>
+			,profit_price=#{profit_price}
+		</if>
+		<if test=' freight_price != null and freight_price != "" '>
+			,freight_price=#{freight_price}
+		</if>
+		<if test=' pay_way != null and pay_way != "" '>
+			,pay_way=#{pay_way}
+		</if>
+		<if test=' pay_charge != null and pay_charge != "" '>
+			,pay_charge=#{pay_charge}
+		</if>
+		<if test=' out_trade_no != null and out_trade_no != "" '>
+			,out_trade_no=#{out_trade_no}
+		</if>
+		where order_id=#{order_id}
+	</update>
+	
+	<insert id="insertOrderMerchants" parameterType="orderMerchantsBean" useGeneratedKeys="true" keyProperty="order_merchants_id">
+		insert into tst_order_merchants
+		(order_merchants_no,order_id,order_no,
+		member_id,device_no,cargo_no,
+		order_type,order_state,order_remark,
+		shop_id,shop_name,is_cross_border,
+		create_time,update_time)
+		values
+		(#{order_merchants_no},#{order_id},#{order_no},
+		#{member_id},#{device_no},#{cargo_no},
+		IFNULL(#{order_type},"goods"),#{order_state},#{order_remark},
+		#{shop_id},#{shop_name},#{is_cross_border},
+		now(),now())
+	</insert>
+	
+	<update id="updateOrderMerchants" parameterType="orderMerchantsBean">
+		update tst_order_merchants
+		set update_time=now()
+		<if test=' cross_border_pay_state != null and cross_border_pay_state != "" '>
+			,cross_border_pay_state=#{cross_border_pay_state}
+		</if>
+		<if test=' cross_border_state != null and cross_border_state != "" '>
+			,cross_border_state=#{cross_border_state}
+		</if>
+		<if test=' order_group_id != null and order_group_id != "" '>
+			,order_group_id=#{order_group_id}
+		</if>
+		<if test=' order_total_price != null and order_total_price != "" '>
+			,order_total_price=#{order_total_price}
+		</if>
+		<if test=' order_actual_price != null and order_actual_price != "" '>
+			,order_actual_price=#{order_actual_price}
+		</if>
+		<if test=' profit_price != null and profit_price != "" '>
+			,profit_price=#{profit_price}
+		</if>
+		<if test=' freight_price != null and freight_price != "" '>
+			,freight_price=#{freight_price}
+		</if>
+		<if test=' product_total_price != null and product_total_price != "" '>
+			,product_total_price=#{product_total_price}
+		</if>
+		<if test=' order_state != null and order_state != "" '>
+			,order_state=#{order_state}
+		</if>
+		<if test=' logistics_time != null and logistics_time != "" '>
+			,logistics_time=#{logistics_time}
+		</if>
+		where is_delete='0' 
+		<if test=' order_merchants_id != null and order_merchants_id != "" '>
+			and order_merchants_id=#{order_merchants_id}
+		</if>
+		<if test=' order_merchants_no != null and order_merchants_no != "" '>
+			and order_merchants_no=#{order_merchants_no}
+		</if>
+	</update>
+	
+	<insert id="insertOrderAddress" parameterType="orderAddressBean">
+		insert into tst_order_address
+		(order_id,address_id,address_mobile,address_name,
+		address_province,address_city,address_country,
+		address_detailed,address_road,address_zip_code,
+		address_longitude,address_latitude,create_time,update_time)
+		values
+		(#{order_id},#{address_id},#{address_mobile},#{address_name},
+		#{address_province},#{address_city},#{address_country},
+		#{address_detailed},#{address_road},#{address_zip_code},
+		#{address_longitude},#{address_latitude},now(),now())
+	</insert>
+</mapper>

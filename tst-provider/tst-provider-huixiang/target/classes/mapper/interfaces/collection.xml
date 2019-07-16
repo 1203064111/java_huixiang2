@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.interfaces.CollectionDao">
+	
+	<select id="getCollections" parameterType="collectionBean" resultType="Map">
+		select DATE_FORMAT(a.update_time, '%Y-%m-%d %H:%i' )update_time
+		<if test=' collection_type == "1" '>
+			,b.product_id,b.product_name,b.product_img,b.product_now_price,b.product_sales
+		</if>
+		<if test=' collection_type == "2" '>
+			,c.shop_id,c.shop_name,c.shop_img
+		</if>
+		from tst_collection as a
+		<if test=' collection_type == "1" '>
+			inner join tst_product as b
+			on a.collection_id=b.product_id and b.is_delete='0' and b.product_state='1'
+		</if>
+		<if test=' collection_type == "2" '>
+			inner join tst_shop as c
+			on a.collection_id=c.shop_id and c.is_delete='0' 
+		</if>
+		where a.member_id=#{member_id} and a.collection_type=#{collection_type} and a.is_delete='0'
+		order by a.update_time desc
+	</select>
+
+	<update id="updateCollection" parameterType="collectionBean">
+		update tst_collection
+		set update_time=now(),is_delete=(case when is_delete='1' then '0' else '1' end)
+		where member_collection_id=#{member_collection_id}
+	</update>
+	
+	<insert id="insertCollection" parameterType="collectionBean">
+		insert into tst_collection
+		(member_id,collection_type,collection_id,create_time,update_time)
+		values
+		(#{member_id},#{collection_type},#{collection_id},now(),now())
+	</insert>
+
+	<select id="getCollectionDetail" parameterType="collectionBean" resultType="collectionBean">
+		select * from tst_collection 
+		where is_delete = 0 and member_id=#{member_id} and collection_id=#{collection_id} and collection_type=#{collection_type}
+	</select>
+	
+	
+	<select id="getMemberChallengesByMember" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.*,b.member_nick_name as member_name,b.member_img as member_img from tst_member_challenge as a 
+		left join tst_member as b
+		on a.member_id = b.member_id
+		where a.is_delete= 0  and a.state = '1'
+		<if test=' member_id != null and member_id != "" '>
+			 and a.member_id=#{member_id}
+		</if>
+		<if test=' challenge_resource != null and challenge_resource != "" '>
+			 and a.challenge_resource=#{challenge_resource}
+		</if>
+		
+	</select>
+	<select id="getMemberChallengesBySearch" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.*,b.member_nick_name as member_name,b.member_img as member_img from tst_member_challenge as a 
+		left join tst_member as b
+		on a.member_id = b.member_id
+		where a.is_delete= 0  and a.state = '1'
+		<if test=' product_name != null and product_name != "" '>
+			 and a.product_name like concat('%',#{product_name},'%')
+		</if>
+		<if test=' product_id != null and product_id != "" '>
+			 and a.product_id = #{product_id}
+		</if>
+		
+	</select>
+	
+	<select id="getMemberChallengesIsWellByMember" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.*,c.member_nick_name as member_name,c.member_img as member_img from tst_member_challenge as a 
+		inner join tst_challenge_well as b 
+		on b.challenge_id = a.challenge_id
+		and b.is_delete = 0 
+		left join tst_member as c
+		on a.member_id = c.member_id
+		where a.is_delete= 0  and a.state = '1'
+		and b.member_id=#{member_id}
+	</select>
+	
+	<select id="getFollowMembers" parameterType="challengeFollowBean" resultType="memberBean">
+		select a.member_id,a.member_img,a.member_nick_name from tst_member as a 
+		inner join tst_challenge_follow as b 
+		on a.member_id = b.parent_member_id
+		where b.member_id=#{member_id} and b.is_delete=0 
+	</select>
+	
+	
+	<select id="getFansMembers" parameterType="challengeFollowBean" resultType="memberBean">
+		select a.member_id,a.member_img,a.member_nick_name from tst_member as a 
+		inner join tst_challenge_follow as b 
+		on a.member_id = b.member_id
+		where b.parent_member_id=#{member_id} and b.is_delete=0 
+	</select>
+	
+	<select id="getFootprints" parameterType="challengeFootprintBean" resultType="memberChallengeBean">
+		select distinct a.*,c.member_nick_name as member_name,c.member_img as member_img from tst_member_challenge as a
+		inner join tst_challenge_footprint as b 
+		on b.challenge_id = a.challenge_id
+		left join tst_member as c
+		on a.member_id = c.member_id
+		where b.member_id=#{member_id}  and b.is_delete=0  and a.is_delete =0 and a.state ='1'
+		
+	</select>
+	<select id="getMemberRewards" parameterType="memberRewardBean" resultType="memberRewardBean">
+		select * from tst_member_reward 
+		where member_id = #{member_id} and state = '1' and is_delete = 0
+	</select>
+	
+</mapper>

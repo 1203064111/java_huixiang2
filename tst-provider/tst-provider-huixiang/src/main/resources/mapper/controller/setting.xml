@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.controller.SettingDaoC">
+	
+	<select id="getPlatformDetail" parameterType="platformBean" resultType="platformBean">
+		select * from tst_platform
+		where is_delete='0'
+	</select>
+	
+	<update id="updatePlatform" parameterType="platformBean">
+		update tst_platform
+		set update_time=now(),
+		platform_name=#{platform_name},
+		platform_logo=#{platform_logo},
+		platform_version=#{platform_version},
+		platform_desc=#{platform_desc},
+		platfrom_copyright=#{platfrom_copyright},
+		platfrom_copyright_company=#{platfrom_copyright_company}
+		where platform_id=#{platform_id}
+	</update>
+	
+	<select id="getAdvices" parameterType="adviceBean" resultType="adviceBean">
+		select * from tst_advice
+		where is_delete='0'
+		order by create_time desc
+	</select>
+	
+	<update id="updatePercent" parameterType="percentBean">
+		update tst_percent
+		set update_time=now(),
+		percent_value=#{percent_value}
+		where percent_id=#{percent_id}
+	</update>
+	
+	<select id="getPercents" parameterType="percentBean" resultType="percentBean">
+		select * from tst_percent
+		where is_delete='0'
+	</select>
+		
+	<select id="getPercentDetail" parameterType="percentBean" resultType="percentBean">
+		select * from tst_percent
+		where is_delete='0' 
+		<if test=' percent_type != null and percent_type != "" '>
+			 and percent_type=#{percent_type}
+		</if>
+		limit 0,1
+	</select>
+
+	<resultMap id="cityList" type="cityBean"> 
+		<result column="id" property="id"/>
+		<result column="name" property="name"/>
+		<result column="parent_id" property="parent_id"/>
+		<result column="full_pinyin" property="full_pinyin"/>
+		<result column="first_pingyin" property="first_pingyin"/>
+		<result column="create_time" property="create_time"/>
+        <association property="cityBeans"  resultMap="cityList2">
+        </association>  
+    </resultMap>
+    
+    <resultMap id="cityList2" type="cityBean">
+    	<result column="id2" property="id"/>
+		<result column="name2" property="name"/>
+		<result column="parent_id2" property="parent_id"/>
+		<result column="full_pinyin2" property="full_pinyin"/>
+		<result column="first_pingyin2" property="first_pingyin"/>
+		<result column="create_time2" property="create_time"/>
+		<association property="cityBeans"  resultMap="cityList3">
+        </association>  
+    </resultMap>
+    
+    <resultMap id="cityList3" type="cityBean">
+    	<result column="id3" property="id"/>
+		<result column="name3" property="name"/>
+		<result column="parent_id3" property="parent_id"/>
+		<result column="full_pinyin3" property="full_pinyin"/>
+		<result column="first_pingyin3" property="first_pingyin"/>
+		<result column="create_time3" property="create_time"/>
+    </resultMap>
+    
+   
+    
+	<select id="getCitys" parameterType="cityBean" resultMap="cityList">
+		select a.id,a.name,a.parent_id,a.create_time,a.first_pingyin,a.full_pinyin,
+		b.id as id2,b.name as name2,b.parent_id as parent_id2,b.create_time as create_time2,b.first_pingyin as first_pingyin2,b.full_pinyin as full_pinyin2,
+		c.id as id3,c.name as name3,c.parent_id as parent_id3,c.create_time as create_time2,c.first_pingyin as first_pingyin3,c.full_pinyin as full_pigyin3 
+		
+		from tst_city as a
+		left join tst_city as b 
+		on b.parent_id=a.id and b.is_delete='0'
+		left join tst_city as c
+		on c.parent_id=b.id and c.is_delete='0'
+		
+		where a.parent_id='-1' and a.is_delete='0'
+	</select>
+	
+	
+	<select id="getCityHots" parameterType="cityHotBean" resultType="cityHotBean">
+		select * from tst_city_hot
+		where is_delete = 0 
+		order by create_time desc
+	</select>
+	
+	<select id="getCityOutHots" parameterType="cityBean" resultMap="cityList">
+		select a.id,a.name,a.parent_id,a.create_time,a.first_pingyin,a.full_pinyin,
+		b.id as id2,b.name as name2,b.parent_id as parent_id2,b.create_time as create_time2,b.first_pingyin as first_pingyin2,b.full_pinyin as full_pinyin2
+		
+		from tst_city as a
+		left join tst_city as b 
+		on b.parent_id=a.id and b.is_delete='0'
+		left join tst_city_hot as c 
+		on b.id = c.city_id and c.is_delete = 0
+		
+		where a.parent_id='-1' and a.is_delete='0' and c.hot_city_id is null
+	</select>
+	
+	<insert id="insertCityHot" parameterType="cityHotBean">
+		insert into tst_city_hot
+		(city_id,city_name,create_time,update_time)
+		select id as city_id,name as city_name,now(),now() from tst_city 
+		where name = #{city_name} and parent_id != -1
+	</insert>
+	
+	<update id="deleteCityHot" parameterType="cityHotBean">
+		update tst_city_hot 
+		set update_time = now()
+		,is_delete = 1
+		where hot_city_id = #{hot_city_id}
+	</update>
+	
+	<select id="getOneCitys" parameterType="cityBean" resultType="cityBean">
+		select * from tst_city
+		where parent_id=#{parent_id} and is_delete='0'
+	</select>
+
+	<insert id="insertHtml" parameterType="htmlBean">
+		insert into tst_system_html
+		(html_name,html_url_desc,create_time,update_time)
+		values
+		(#{html_name},#{html_url_desc},now(),now())
+	</insert>
+	
+	<update id="updateHtml" parameterType="htmlBean">
+		update tst_system_html
+		set html_name=#{html_name},
+		html_url_desc=#{html_url_desc},
+		update_time=now()
+		where html_id=#{html_id}
+	</update>
+	<update id="deleteHtml" parameterType="htmlBean">
+		update tst_system_html
+		set is_delete='1'
+		where html_id=#{html_id}
+	</update>
+	<select id="getHtmlDetail" parameterType="htmlBean" resultType="htmlBean">
+		select * from tst_system_html
+		where is_delete='0'
+		 and html_id=#{html_id}
+	</select>
+	<select id="getHtmls" parameterType="htmlBean" resultType="htmlBean">
+		select * from tst_system_html
+		where is_delete='0'
+		order by create_time desc
+	</select>
+	
+	<insert id="insertHotSearch" parameterType="hotSearchBean">
+		insert into tst_hot_search
+		(search_name,sort,create_time,update_time)
+		values
+		(#{search_name},#{sort},now(),now())
+	</insert>
+	
+	<update id="updateHotSearch" parameterType="hotSearchBean">
+		update tst_hot_search
+		set search_name=#{search_name},
+		sort=#{sort},
+		update_time=now()
+		where search_id=#{search_id}
+	</update>
+	<update id="deleteHotSearch" parameterType="hotSearchBean">
+		update tst_hot_search
+		set is_delete='1'
+		where  FIND_IN_SET(search_id,#{search_ids})
+	</update>
+	<select id="getHotSearch" parameterType="hotSearchBean" resultType="hotSearchBean">
+		select * from tst_hot_search
+		where is_delete='0'
+		 and search_id=#{search_id}
+	</select>
+	<select id="getHotSearchs" parameterType="hotSearchBean" resultType="hotSearchBean">
+		select * from tst_hot_search
+		where is_delete='0'
+		order by create_time desc
+	</select>
+
+	
+</mapper>

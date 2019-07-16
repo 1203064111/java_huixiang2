@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.controller.RecordDaoC">
+
+	<update id="deleteRecordAttacheds" parameterType="recordAttachedBean">
+		update tst_record_attached
+		set is_delete='1',
+		update_time=now()
+		where record_id=#{record_id}
+	</update>
+	
+	<update id="updateRecordAttached" parameterType="recordAttachedBean">
+		update tst_record_attached
+		set is_delete='0',
+		update_time=now(),
+		GUID=#{GUID},
+		GUID_HEAD=#{GUID_HEAD},
+		BIZ_TYPE_CODE=#{BIZ_TYPE_CODE},
+		ATTACHED_SEQ_NO=#{ATTACHED_SEQ_NO},
+		CERT_TYPE_CODE=#{CERT_TYPE_CODE},
+		CERT_CLOB=#{CERT_CLOB},
+		FILE_NAME=#{FILE_NAME},
+		FILE_TYPE=#{FILE_TYPE},
+		STORE_DATE=#{STORE_DATE}
+		where attached_id=#{attached_id}
+	</update>
+
+	<insert id="insertRecordAttached" parameterType="recordAttachedBean">
+		insert into tst_record_attached
+		(record_id,GUID,GUID_HEAD,BIZ_TYPE_CODE,ATTACHED_SEQ_NO,
+		CERT_TYPE_CODE,CERT_CLOB,FILE_NAME,FILE_TYPE,
+		STORE_DATE,create_time,update_time)
+		values
+		(#{record_id},#{GUID},#{GUID_HEAD},#{BIZ_TYPE_CODE},#{ATTACHED_SEQ_NO},
+		#{CERT_TYPE_CODE},#{CERT_CLOB},#{FILE_NAME},#{FILE_TYPE},
+		#{STORE_DATE},now(),now())
+	</insert>
+
+	<select id="getRecordAttacheds" parameterType="recordAttachedBean" resultType="recordAttachedBean">
+		select * from tst_record_attached
+		where record_id=#{record_id} and is_delete=0
+	</select>
+
+    <insert id="insertRecord" parameterType="RecordBean" useGeneratedKeys="true" keyProperty="record_id">
+        insert into tst_record (record_sku,
+                                record_electricity_code,
+                                record_electricity_name,
+                                record_goods_name,
+                                record_ciq_code,
+                                record_goods_specification,
+                                record_business_types,
+                                record_the_notification,
+                                record_legal_units,
+                                record_reduced_num,
+                                record_hs_code,
+                                record_measuring_unit,
+                                record_measuring_unit_code,
+                                record_enterprise_name,
+                                record_supplier_name,
+                                record_inspection_code,
+                                record_country_code,
+                                record_in_china,
+                                record_product_code,
+                                record_product_brand,
+                                record_english_name,
+                                record_translation_name,
+                                record_performance_indicators,
+                                record_authentication_information,
+                                record_license,
+                                record_barcode,
+                                record_period_validity,
+                                record_main_ingredients,
+                                record_use,
+                                record_applicable_standards,
+                                record_is_inspection,
+                                record_is_pilot,
+                                record_is_attachment,
+                                record_is_origin,
+                                record_is_report,
+                                record_is_legal,
+                                record_is_translation,
+                                record_other,
+                                record_status,create_time,update_time)
+        values (#{ record_sku},
+                #{ record_electricity_code},
+                #{ record_electricity_name},
+                #{ record_goods_name},
+                #{ record_ciq_code},
+                #{ record_goods_specification},
+                #{ record_business_types},
+                #{ record_the_notification},
+                #{ record_legal_units},
+                #{ record_reduced_num},
+                #{ record_hs_code},
+                #{ record_measuring_unit},
+                #{ record_measuring_unit_code},
+                #{ record_enterprise_name},
+                #{ record_supplier_name},
+                #{ record_inspection_code},
+                #{ record_country_code},
+                #{ record_in_china},
+                #{ record_product_code},
+                #{ record_product_brand},
+                #{ record_english_name},
+                #{ record_translation_name},
+                #{ record_performance_indicators},
+                #{ record_authentication_information},
+                #{ record_license},
+                #{ record_barcode},
+                #{ record_period_validity},
+                #{ record_main_ingredients},
+                #{ record_use},
+                #{ record_applicable_standards},
+                #{ record_is_inspection},
+                #{ record_is_pilot},
+                #{ record_is_attachment},
+                #{ record_is_origin},
+                #{ record_is_report},
+                #{ record_is_legal},
+                #{ record_is_translation},
+                #{ record_other},
+                #{record_status},now(),now())
+    </insert>
+
+    <update id="deleteRecord" parameterType="RecordBean">
+        update tst_record
+        set is_delete = '1'
+        where FIND_IN_SET(record_id, #{record_ids})
+    </update>
+    <select id="getRecords" parameterType="RecordBean" resultType="RecordBean">
+        select *
+        from tst_record
+        where is_delete = '0'
+        order by create_time desc
+    </select>
+
+    <select id="getRecordsThrough" parameterType="RecordBean" resultType="RecordBean">
+        select *
+        from tst_record
+        where is_delete = '0' and record_status='3'
+    </select>
+
+    <select id="getRecordDetail" parameterType="RecordBean" resultType="RecordBean">
+        select *
+        from tst_record
+        where record_id = #{record_id}
+          and is_delete = '0'
+    </select>
+
+    <update id="updateRecord" parameterType="RecordBean">
+        update tst_record
+        <set>
+            <if test="record_sku != null">
+                record_sku = #{record_sku,jdbcType=VARCHAR},
+            </if>
+            <if test="record_electricity_code != null">
+                record_electricity_code = #{record_electricity_code,jdbcType=VARCHAR},
+            </if>
+            <if test="record_electricity_name != null">
+                record_electricity_name = #{record_electricity_name,jdbcType=VARCHAR},
+            </if>
+            <if test="record_goods_name != null">
+                record_goods_name = #{record_goods_name,jdbcType=VARCHAR},
+            </if>
+            <if test="record_ciq_code != null">
+                record_ciq_code = #{record_ciq_code,jdbcType=VARCHAR},
+            </if>
+            <if test="record_goods_specification != null">
+                record_goods_specification = #{record_goods_specification,jdbcType=VARCHAR},
+            </if>
+            <if test="record_business_types != null">
+                record_business_types = #{record_business_types,jdbcType=VARCHAR},
+            </if>
+            <if test="record_the_notification != null">
+                record_the_notification = #{record_the_notification,jdbcType=VARCHAR},
+            </if>
+            <if test="record_legal_units != null">
+                record_legal_units = #{record_legal_units,jdbcType=VARCHAR},
+            </if>
+            <if test="record_reduced_num != null">
+                record_reduced_num = #{record_reduced_num,jdbcType=VARCHAR},
+            </if>
+            <if test="record_hs_code != null">
+                record_hs_code = #{record_hs_code,jdbcType=VARCHAR},
+            </if>
+            <if test="record_measuring_unit != null">
+                record_measuring_unit = #{record_measuring_unit,jdbcType=VARCHAR},
+            </if>
+            <if test="record_measuring_unit_code != null">
+                record_measuring_unit_code = #{record_measuring_unit_code,jdbcType=VARCHAR},
+            </if>
+            <if test="record_enterprise_name != null">
+                record_enterprise_name = #{record_enterprise_name,jdbcType=VARCHAR},
+            </if>
+            <if test="record_supplier_name != null">
+                record_supplier_name = #{record_supplier_name,jdbcType=VARCHAR},
+            </if>
+            <if test="record_inspection_code != null">
+                record_inspection_code = #{record_inspection_code,jdbcType=VARCHAR},
+            </if>
+            <if test="record_country_code != null">
+                record_country_code = #{record_country_code,jdbcType=VARCHAR},
+            </if>
+            <if test="record_in_china != null">
+                record_in_china = #{record_in_china,jdbcType=INTEGER},
+            </if>
+            <if test="record_product_code != null">
+                record_product_code = #{record_product_code,jdbcType=VARCHAR},
+            </if>
+            <if test="record_product_brand != null">
+                record_product_brand = #{record_product_brand,jdbcType=VARCHAR},
+            </if>
+            <if test="record_english_name != null">
+                record_english_name = #{record_english_name,jdbcType=VARCHAR},
+            </if>
+            <if test="record_translation_name != null">
+                record_translation_name = #{record_translation_name,jdbcType=VARCHAR},
+            </if>
+            <if test="record_performance_indicators != null">
+                record_performance_indicators = #{record_performance_indicators,jdbcType=VARCHAR},
+            </if>
+            <if test="record_authentication_information != null">
+                record_authentication_information = #{record_authentication_information,jdbcType=VARCHAR},
+            </if>
+            <if test="record_license != null">
+                record_license = #{record_license,jdbcType=VARCHAR},
+            </if>
+            <if test="record_barcode != null">
+                record_barcode = #{record_barcode,jdbcType=VARCHAR},
+            </if>
+            <if test="record_period_validity != null">
+                record_period_validity = #{record_period_validity,jdbcType=VARCHAR},
+            </if>
+            <if test="record_main_ingredients != null">
+                record_main_ingredients = #{record_main_ingredients,jdbcType=VARCHAR},
+            </if>
+            <if test="record_use != null">
+                record_use = #{record_use,jdbcType=VARCHAR},
+            </if>
+            <if test="record_applicable_standards != null">
+                record_applicable_standards = #{record_applicable_standards,jdbcType=VARCHAR},
+            </if>
+            <if test="record_is_inspection != null">
+                record_is_inspection = #{record_is_inspection,jdbcType=INTEGER},
+            </if>
+            <if test="record_is_pilot != null">
+                record_is_pilot = #{record_is_pilot,jdbcType=INTEGER},
+            </if>
+            <if test="record_is_attachment != null">
+                record_is_attachment = #{record_is_attachment,jdbcType=INTEGER},
+            </if>
+            <if test="record_is_origin != null">
+                record_is_origin = #{record_is_origin,jdbcType=INTEGER},
+            </if>
+            <if test="record_is_report != null">
+                record_is_report = #{record_is_report,jdbcType=INTEGER},
+            </if>
+            <if test="record_is_legal != null">
+                record_is_legal = #{record_is_legal,jdbcType=INTEGER},
+            </if>
+            <if test="record_is_translation != null">
+                record_is_translation = #{record_is_translation,jdbcType=INTEGER},
+            </if>
+            <if test="record_other != null">
+                record_other = #{record_other,jdbcType=VARCHAR},
+            </if>
+            record_status = #{record_status},
+        </set>
+        where record_id = #{record_id,jdbcType=INTEGER} and is_delete = '0'
+    </update>
+
+
+    <update id="refusedRecord" parameterType="RecordBean">
+        update tst_record
+        set record_status = '2'
+        where is_delete='0'
+        <if test=' record_id != null and record_id != "" '>
+        	and record_id=#{record_id}
+        </if>
+        <if test=' record_sku != null and record_sku != "" '>
+        	and record_sku=#{record_sku}
+        </if>
+    </update>
+
+    <update id="throughRecord" parameterType="RecordBean">
+        update tst_record
+        set record_status = '3',record_number=#{record_number}
+        where is_delete='0'
+        <if test=' record_id != null and record_id != "" '>
+        	and record_id=#{record_id}
+        </if>
+        <if test=' record_sku != null and record_sku != "" '>
+        	and record_sku=#{record_sku}
+        </if>
+    </update>
+
+</mapper>

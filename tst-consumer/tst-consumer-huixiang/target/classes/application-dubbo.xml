@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd   
+    http://code.alibabatech.com/schema/dubbo http://code.alibabatech.com/schema/dubbo/dubbo.xsd">
+
+    <!-- 配置文件加载 -->
+    <context:property-placeholder location="classpath:base-info.properties"/>
+
+    <!-- 提供方应用信息，用于计算依赖关系 -->
+    <dubbo:application name="${project_name}"/>
+    <!-- 使用zookeeper注册中心暴露服务地址 -->
+    <dubbo:registry address="${zookeeper.address}" check="false"/>
+
+    <!-- 多协议配置 -->
+    <dubbo:protocol name="dubbo" port="${dubbo.port}"/>
+    <!--<dubbo:protocol name="hessian" port="${duboo.hessian.port}"/> -->
+    <dubbo:consumer check="true" timeout="${dubbo.consumer.timeout}" retries="${dubbo.provider.retries}"/>
+
+    <dubbo:provider timeout="${dubbo.provider.timeout}"/>
+    <!--订阅服务-->
+    <dubbo:reference id="memberService" interface="tst.project.interfaces.IMemberService"/>
+    <dubbo:reference id="settingService" interface="tst.project.interfaces.ISettingService"/>
+    <dubbo:reference id="addressService" interface="tst.project.interfaces.IAddressService"/>
+    <dubbo:reference id="productService" interface="tst.project.interfaces.IProductService"/>
+	<dubbo:reference id="orderService" interface="tst.project.interfaces.IOrderService"/>
+    <dubbo:reference id="productCarService" interface="tst.project.interfaces.IProductCarService"/>
+	<dubbo:reference id="collectionService" interface="tst.project.interfaces.ICollectionService"/>
+	<dubbo:reference id="deviceService" interface="tst.project.interfaces.IDeviceService"/>
+	<dubbo:reference id="challengeService" interface="tst.project.interfaces.IChallengeService"/>
+
+    <dubbo:reference id="systemService" interface="tst.project.controller.ISystemService"/>
+    <dubbo:reference id="settingServiceC" interface="tst.project.controller.ISettingServiceC"/>
+	<dubbo:reference id="goodsServiceC" interface="tst.project.controller.IGoodsServiceC"/>
+    <dubbo:reference id="recordServiceC" interface="tst.project.controller.IRecordServiceC"/>
+    <dubbo:reference id="memberServiceC" interface="tst.project.controller.IMemberServiceC"/>
+	<dubbo:reference id="orderServiceC" interface="tst.project.controller.IOrderServiceC"/>
+	<dubbo:reference id="deviceServiceC" interface="tst.project.controller.IDeviceServiceC"/>
+	<dubbo:reference id="challengeServiceC" interface="tst.project.controller.IChallengeServiceC"/>
+</beans>

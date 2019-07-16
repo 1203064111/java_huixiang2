@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+	<!-- %c 输出日志信息所属的类的全名 %d 输出日志时间点的日期或时间，默认格式为 ISO8601，也可以在其后指定格式，比如：%d{yyyy-MM-dd 
+		HH:mm:ss }，输出类似：2008-08-08 20:08:08 %f 输出日志信息所属的类的类名 %l 输出日志事件的发生位置，即输出日志信息的语句处于它所在的类的第几行 
+		%m 输出代码中指定的信息，如log(message)中的message %n 输出一个回车换行符，Windows平台为“rn”，Unix平台为“n” 
+		%p 输出优先级，即 DEBUG、INFO、WARN、ERROR、FATAL。如果是调用 debug() 输出的，则为 DEBUG，依此类推 %r 
+		输出自应用启动到输出该日志信息所耗费的毫秒数 %t 输出产生该日志事件的线程名 -->
+
+	<!-- appender: ConsoleAppender -->
+	<appender name="console" class="org.apache.log4j.ConsoleAppender">
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="[%d{yyyy-MM-dd HH:mm:ss}] [%t] [%c] [%p] - %m%n" />
+		</layout>
+	</appender>
+
+	<!-- appender: FileAppender rootLog -->
+	<appender name="rootLog" class="org.apache.log4j.DailyRollingFileAppender">
+		<param name="File" value="${logger.base.path}/${logger.project.path}/base.log" />
+		<param name="Append" value="true" />
+		<param name="DatePattern" value="'.'yyyy-MM-dd" />
+		<param name="Encoding" value="UTF-8" />
+		<param name="MaxBackupIndex" value="20" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="[%d{yyyy-MM-dd HH:mm:ss}] [%t] [%c] [%p] - %m%n" />
+		</layout>
+	</appender>
+
+	<!-- appender: FileAppender audit -->
+	<appender name="audit" class="org.apache.log4j.DailyRollingFileAppender">
+		<param name="File" value="${logger.base.path}/${logger.project.path}/audit.log" />
+		<param name="Append" value="true" />
+		<param name="DatePattern" value="'.'yyyy-MM-dd" />
+		<param name="Encoding" value="UTF-8" />
+		<param name="MaxBackupIndex" value="20" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="[%d{yyyy-MM-dd HH:mm:ss}] [%t] [%c] [%p] - %m%n" />
+		</layout>
+	</appender>
+	<!-- appender: FileAppender careful -->
+	<appender name="careful" class="org.apache.log4j.DailyRollingFileAppender">
+		<param name="File" value="${logger.base.path}/${logger.project.path}/careful.log" />
+		<param name="Append" value="true" />
+		<param name="DatePattern" value="'.'yyyy-MM-dd" />
+		<param name="Encoding" value="UTF-8" />
+		<param name="MaxBackupIndex" value="20" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="[%d{yyyy-MM-dd HH:mm:ss}] [%t] [%c] [%p] - %m%n" />
+		</layout>
+	</appender>
+
+
+	<!-- =================================================================== -->
+
+	<!-- Logger level: DEBUG, INFO, WARN, ERROR, FATAL, ALL, OFF -->
+
+	<!-- Output internal SQL -->
+	<logger name="java.sql">
+		<level value="${logger.level}" />
+	</logger>
+	<logger name="java.sql.Connection">
+		<level value="${logger.level}" />
+	</logger>
+	<logger name="java.sql.Statement">
+		<level value="${logger.level}" />
+	</logger>
+	<logger name="java.sql.PreparedStatement">
+		<level value="${logger.level}" />
+	</logger>
+	<logger name="java.sql.ResultSet">
+		<level value="${logger.level}" />
+	</logger>
+	<logger name="com.apache.ibatis">
+		<level value="${logger.level}" />
+	</logger>
+	<logger name="com.apache.ibatis.jdbc.ScriptRunner">
+		<level value="${logger.level}" />
+	</logger>
+	<logger name="org.springframework">
+		<level value="${logger.level}" />
+	</logger>
+	
+	<logger name="Audit" additivity="false">
+		<level value="${logger.level}" />
+		<appender-ref ref="audit" />
+	</logger>
+	<logger name="Careful" additivity="false">
+		<level value="${logger.level}" />
+		<appender-ref ref="careful" />
+	</logger>
+	<!-- 设置总体的默认日志级别 -->
+	<root>
+		<level value="${logger.level}" />
+		<appender-ref ref="rootLog" />
+		<appender-ref ref="console" />
+	</root>
+
+	<!-- =================================================================== -->
+
+</log4j:configuration>

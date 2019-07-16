@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.controller.DeviceDaoC">
+
+	<select id="getLoadingDeviceReplenishments" parameterType="deviceReplenishmentBean" resultType="Map">
+		
+		select f.goods_name,e.device_no,b.cargo_no,d.product_name,b.replenishment_stock,e.batch_no
+		from  tst_device_replenishment as a
+		
+		inner join tst_device_replenishment_cargo as b
+		on a.replenishment_id=b.replenishment_id
+		
+		inner join tst_product as d
+		on b.product_id=d.product_id
+		
+		inner join tst_device_replenishment_batch as e
+		on b.replenishment_cargo_id=e.replenishment_cargo_id
+		
+		inner join tst_goods as f
+		on e.goods_id=f.goods_id
+		
+		
+		where FIND_IN_SET(a.replenishment_id,#{replenishment_ids})
+	</select>
+	
+	<select id="getLoadingDeviceReplenishments2" parameterType="deviceReplenishmentBean" resultType="Map">
+		
+		select f.goods_name,sum(b.replenishment_stock)replenishment_stock,e.batch_no
+		from  tst_device_replenishment as a
+		
+		inner join tst_device_replenishment_cargo as b
+		on a.replenishment_id=b.replenishment_id
+		
+		inner join tst_product as d
+		on b.product_id=d.product_id
+		
+		inner join tst_device_replenishment_batch as e
+		on b.replenishment_cargo_id=e.replenishment_cargo_id
+		
+		inner join tst_goods as f
+		on e.goods_id=f.goods_id
+		
+		
+		where FIND_IN_SET(a.replenishment_id,#{replenishment_ids})
+		group by f.goods_id,e.batch_id
+
+	</select>
+
+
+	<update id="loadingDeviceReplenishment" parameterType="deviceReplenishmentBean">
+		update tst_device_replenishment
+		set update_time=now(),
+		loading_no=#{loading_no},
+		loading_state='1'
+		where FIND_IN_SET(replenishment_id,#{replenishment_ids})
+	</update>
+	
+	<update id="updateClerkDevices" parameterType="deviceBean">
+		update tst_device
+		set update_time=now(),
+		clerk_id=#{clerk_id}
+		where FIND_IN_SET(device_id,#{device_ids})
+	</update>
+
+	<select id="getClerkDevices" parameterType="deviceBean" resultType="deviceBean">
+		select * from tst_device
+		where is_delete='0'  and (clerk_id is null or clerk_id ='')
+		order by create_time desc
+	</select>
+	
+	<insert id="insertDeviceClerk" parameterType="deviceClerkBean">
+		insert into tst_device_clerk
+		(clerk_name,clerk_img,clerk_mobile,
+		clerk_area,clerk_remark,create_time,update_time)
+		values
+		(#{clerk_name},#{clerk_img},#{clerk_mobile},
+		#{clerk_area},#{clerk_remark},now(),now())
+	</insert>
+	
+	<update id="updateDeviceClerk" parameterType="deviceClerkBean">
+		update tst_device_clerk
+		set update_time=now()
+		<if test=' clerk_name != null and clerk_name != "" '>
+			,clerk_name=#{clerk_name}
+		</if>
+		<if test=' clerk_img != null and clerk_img != "" '>
+			,clerk_img=#{clerk_img}
+		</if>
+		<if test=' clerk_mobile != null and clerk_mobile != "" '>
+			,clerk_mobile=#{clerk_mobile}
+		</if>
+		<if test=' clerk_area != null and clerk_area != "" '>
+			,clerk_area=#{clerk_area}
+		</if>
+		<if test=' clerk_remark != null and clerk_remark != "" '>
+			,clerk_remark=#{clerk_remark}
+		</if>
+		where clerk_id=#{clerk_id}
+	</update>
+	<update id="deleteDeviceClerk" parameterType="deviceClerkBean">
+		update tst_device_clerk
+		set update_time=now()
+		,is_delete='1'
+		where FIND_IN_SET(clerk_id,#{clerk_ids})
+	</update>
+	
+	<select id="getDeviceClerkDetail" parameterType="deviceClerkBean" resultType="deviceClerkBean">
+		select * from tst_device_clerk
+		where clerk_id=#{clerk_id} and is_delete='0'
+	</select>
+	
+	<select id="getDeviceClerks" parameterType="deviceClerkBean" resultType="deviceClerkBean">
+		select * from tst_device_clerk
+		where is_delete='0' 
+		order by create_time desc
+	</select>
+	
+
+	<update id="updateDeviceCargoStock" parameterType="deviceCargoBean">
+		update tst_device_cargo as a
+		inner join tst_device as b
+		on a.device_id=b.device_id and b.device_no=#{device_id}
+		set a.update_time=now(),
+		a.is_delete='0',a.product_stock=#{product_stock}
+		where a.cargo_no=#{cargo_no} 
+	</update>
+	
+	<select id="getDeviceCargoDetail" parameterType="deviceCargoBean" resultType="deviceCargoBean">
+		select a.* from tst_device_cargo as a
+		inner join tst_device as b
+		on a.device_id=b.device_id and b.device_no=#{device_id} and b.is_delete='0'
+		where a.cargo_no=#{cargo_no} and a.is_delete='0'
+	</select> 
+	
+	
+	<update id="updateProductStock" parameterType="productBean">
+		update tst_product
+		set update_time=now(),
+		product_stock=product_stock-#{product_stock}
+		where product_id=#{product_id} and is_delete='0' and (product_stock-#{product_stock})>=0
+	</update>
+	
+	<insert id="insertDeviceReplenishmentBatch" parameterType="deviceReplenishmentBatchBean">
+		insert into tst_device_replenishment_batch
+		(replenishment_id,replenishment_cargo_id,
+		batch_id,batch_no,batch_stock,batch_now_stock,batch_price,
+		device_no,cargo_no,product_id,purchase_id,goods_id,
+		create_time,update_time)
+		values
+		(#{replenishment_id},#{replenishment_cargo_id},
+		#{batch_id},#{batch_no},#{batch_stock},#{batch_stock},#{batch_price},
+		#{device_no},#{cargo_no},#{product_id},#{purchase_id},#{goods_id},
+		now(),now())
+	</insert>
+	
+	<select id="getProductBatchs" parameterType="productBean" resultType="goodsBatchBean">
+		select b.batch_no,b.purchase_id,b.batch_price,b.batch_id,b.goods_id,
+		b.batch_now_stock,0 as batch_stock from tst_product_specification_goods as a
+		inner join tst_goods_batch as b
+		on a.goods_id=b.goods_id and b.is_delete='0' and b.batch_now_stock>0
+		where a.product_id=#{product_id} and a.is_delete='0'  
+	</select>
+
+	<select id="shipmentDevice" parameterType="orderMerchantsBean" resultType="Map">
+		select a.order_merchants_id,a.order_merchants_no,a.cargo_no,a.device_no,b.product_id
+		from tst_order_merchants as a 
+		inner join tst_order_product as b
+		on a.order_merchants_id=b.order_merchants_id
+		where a.is_delete='0' and a.order_state != 'cancel' and  a.order_state != "wait_pay"
+		and a.order_type='device' and a.is_shipment='0'
+		and a.device_no=#{device_no}
+		limit 0,1
+	</select>
+	
+	<update id="updateShipmentDevice" parameterType="orderMerchantsBean">
+		update tst_order_merchants
+		set update_time=now(),
+		is_shipment='1'
+		where order_merchants_id=#{order_merchants_id}
+	</update>
+	
+	<select id="getDeviceCargoLoading" parameterType="deviceCargoLoadingBean" resultType="deviceCargoLoadingBean">
+		select * from tst_device_cargo_loading
+		where device_no=#{device_no} and is_delete='0' and loading_state='0'
+		limit 0,1
+	</select>
+	
+	<update id="updateDeviceCargoLoading" parameterType="deviceCargoLoadingBean">
+		update tst_device_cargo_loading
+		set update_time=now(),
+		loading_state='1'
+		where loading_id=#{loading_id}
+	</update>
+
+	<select id="getDeviceReplenishmentCargos" parameterType="deviceReplenishmentCargoBean" resultType="deviceReplenishmentCargoBean">
+		select a.*,b.product_name,b.product_origin_price,
+		b.product_now_price,b.profit_price,d.device_no 
+		
+		from tst_device_replenishment_cargo as a
+		inner join tst_device_replenishment as c
+		on a.replenishment_id=c.replenishment_id and c.is_delete='0'
+		inner join tst_device as d 
+		on c.device_id=d.device_id and d.is_delete='0'
+		
+		left join tst_product as b
+		on a.product_id=b.product_id and b.is_delete='0'
+		where a.replenishment_id=#{replenishment_id} and a.is_delete='0'
+	</select>
+	
+	<update id="examineDeviceReplenishment" parameterType="deviceReplenishmentBean">
+		update tst_device_replenishment
+		set update_time=now()
+		<if test=' replenishment_state != null and replenishment_state != "" '>
+			,replenishment_state=#{replenishment_state}
+		</if>
+		where replenishment_id=#{replenishment_id}
+	</update>
+	
+	<select id="getDeviceReplenishments" parameterType="deviceReplenishmentBean" resultType="deviceReplenishmentBean">
+		select a.*,b.device_no,c.member_account,b.clerk_id,d.clerk_mobile from tst_device_replenishment as a
+		inner join tst_device as b
+		on a.device_id=b.device_id and b.is_delete='0'
+		left join tst_member as c
+		on a.member_id=c.member_id
+		
+		<if test=' clerk_mobile != null and clerk_mobile != "" '>
+			inner join tst_device_clerk as d
+			on b.clerk_id=d.clerk_id and d.clerk_mobile like concat('%',#{clerk_mobile},'%')
+		</if>
+		<if test=' clerk_mobile == null or clerk_mobile == "" '>
+			left join tst_device_clerk as d
+			on b.clerk_id=d.clerk_id
+		</if>
+		where a.is_delete='0' 
+		<if test=' replenishment_ids != null and replenishment_ids != "" '>
+			and FIND_IN_SET(replenishment_id,#{replenishment_ids})
+		</if>
+		<if test=' replenishment_state != null and replenishment_state != "" '>
+			and replenishment_state=#{replenishment_state}
+		</if>
+		<if test=' loading_state != null and loading_state != "" '>
+			and loading_state=#{loading_state}
+		</if>
+		<if test=' loading_no != null and loading_no != "" '>
+			and loading_no like concat('%',#{loading_no},'%')
+		</if>
+		order by create_time desc
+	</select>
+
+	<update id="examineMemberService" parameterType="memberDeviceBean">
+		update tst_member_device as a
+		inner join tst_device as b
+		on a.device_id=b.device_id
+		set b.update_time=now()
+		,b.apply_state='1'
+		,b.member_id=a.member_id
+		where member_device_id=#{member_device_id}
+	</update>
+	
+	<update id="updateMemberDevice" parameterType="memberDeviceBean">
+		<if test=' apply_state == "2" '>
+			update tst_member_device as a
+			left join tst_member_device as b
+			on a.device_id=b.device_id and b.is_delete='0' and b.apply_state='1'
+			set b.apply_state=(case when b.member_device_id=#{member_device_id} then 2 else 3 end)
+			,b.create_time=now()
+			
+			where a.member_device_id=#{member_device_id}
+		</if>
+		<if test=' apply_state != "2" '>
+			update tst_member_device
+			set update_time=now()
+			,apply_state=#{apply_state}
+			where member_device_id=#{member_device_id}
+		</if>
+		
+	</update>
+
+	<select id="getMemberDevices" parameterType="memberDeviceBean" resultType="memberDeviceBean">
+		select a.*,b.device_no,c.member_account from tst_member_device as a
+		inner join tst_device as b
+		on a.device_id=b.device_id  and b.is_delete='0'
+		inner join tst_member as c 
+		on a.member_id=c.member_id and c.is_delete='0'
+		where a.is_delete='0'
+		order by a.create_time desc
+	</select>
+
+	<insert id="insertDeviceCargoLoading" parameterType="deviceCargoLoadingBean">
+		insert into tst_device_cargo_loading
+		(device_no,cargo_id,cargo_no,cargo_num,
+		cargo_name,cargo_img,product_id,product_stock,product_price,
+		create_time,update_time)
+		values
+		(#{device_no},#{cargo_id},#{cargo_no},#{cargo_num},
+		#{cargo_name},#{cargo_img},#{product_id},#{product_stock},#{product_price},
+		now(),now())
+	</insert>
+	
+	<insert id="insertDeviceCargo" parameterType="deviceCargoBean" useGeneratedKeys="true" keyProperty="cargo_id">
+		insert into tst_device_cargo
+		(cargo_no,device_id,product_id,cargo_num,
+		cargo_name,cargo_img,
+		create_time,update_time)
+		values
+		(#{cargo_no},#{device_id},#{product_id},#{cargo_num},
+		#{cargo_name},#{cargo_img},
+		now(),now())
+	</insert>
+	
+
+
+	<update id="updateDeviceCargo" parameterType="deviceCargoBean">
+		update tst_device_cargo
+		set update_time=now(),
+		is_delete='0'
+		<if test=' cargo_no != null and cargo_no != "" '>
+			,cargo_no=#{cargo_no}
+		</if>
+		<if test=' cargo_name != null and cargo_name != "" '>
+			,cargo_name=#{cargo_name}
+		</if>
+		<if test=' cargo_img != null and cargo_img != "" '>
+			,cargo_img=#{cargo_img}
+		</if>
+		<if test=' product_id != null and product_id != "" '>
+			,product_id=#{product_id}
+		</if>
+		<if test=' product_stock != null and product_stock != "" '>
+			,product_stock=#{product_stock}
+		</if>
+		<if test=' cargo_num != null and cargo_num != "" '>
+			,cargo_num=#{cargo_num}
+		</if>
+		where cargo_id=#{cargo_id}
+	</update>
+
+	<update id="deleteDeviceCargos" parameterType="deviceCargoBean">
+		update tst_device_cargo
+		set update_time=now(),
+		is_delete='1'
+		where device_id=#{device_id}
+	</update>
+	
+	<select id="getDeviceCargos" parameterType="deviceCargoBean" resultType="deviceCargoBean">
+		select a.*,b.product_name,b.product_now_price from tst_device_cargo as a
+		left join tst_product as b
+		on a.product_id=b.product_id and b.is_delete='0'
+		where a.device_id=#{device_id} and a.is_delete='0'
+	</select>
+
+	<insert id="insertDevice" parameterType="deviceBean" useGeneratedKeys="true" keyProperty="device_id">
+		insert into tst_device
+		(device_version,device_no,device_name,device_img,
+		device_province,device_city,device_country,device_address,
+		device_longitude,device_latitude,device_count,remind_stock,
+		create_time,update_time)
+		values
+		(#{device_version},#{device_no},#{device_name},#{device_img},
+		#{device_province},#{device_city},#{device_country},#{device_address},
+		#{device_longitude},#{device_latitude},#{device_count},#{remind_stock},
+		now(),now())
+	</insert>
+	
+	<update id="updateDevice" parameterType="deviceBean">
+		update tst_device
+		set update_time=now()
+		<if test=' device_version != null and device_version != "" '>
+			,device_version=#{device_version}
+		</if>
+		<if test=' device_no != null and device_no != "" '>
+			,device_no=#{device_no}
+		</if>
+		<if test=' device_name != null and device_name != "" '>
+			,device_name=#{device_name}
+		</if>
+		<if test=' device_img != null and device_img != "" '>
+			,device_img=#{device_img}
+		</if>
+		<if test=' device_province != null and device_province != "" '>
+			,device_province=#{device_province}
+		</if>
+		<if test=' device_city != null and device_city != "" '>
+			,device_city=#{device_city}
+		</if>
+		<if test=' device_country != null and device_country != "" '>
+			,device_country=#{device_country}
+		</if>
+		<if test=' device_address != null and device_address != "" '>
+			,device_address=#{device_address}
+		</if>
+		<if test=' device_longitude != null and device_longitude != "" '>
+			,device_longitude=#{device_longitude}
+		</if>
+		<if test=' device_latitude != null and device_latitude != "" '>
+			,device_latitude=#{device_latitude}
+		</if>
+		<if test=' device_count != null and device_count != "" '>
+			,device_count=#{device_count}
+		</if>
+		<if test=' remind_stock != null and remind_stock != "" '>
+			,remind_stock=#{remind_stock}
+		</if>
+		where device_id=#{device_id}
+	</update>
+	
+	
+	<update id="deleteDevice" parameterType="deviceBean">
+		update tst_device
+		set update_time=now()
+		,is_delete='1'
+		where FIND_IN_SET(device_id,#{device_ids})
+	</update>
+	
+	<select id="getDeviceDetail" parameterType="deviceBean" resultType="deviceBean">
+		select * from tst_device
+		where is_delete='0'
+		<if test=' device_id != null and device_id != "" '>
+			and device_id=#{device_id}
+		</if>
+		<if test=' device_no != null and device_no != "" '>
+			and device_no=#{device_no}
+		</if>
+	</select>
+	
+	<select id="getDevices" parameterType="deviceBean" resultType="deviceBean">
+		select * from tst_device
+		where is_delete='0'
+		<if test=' device_address != null and device_address != "" '>
+			and concat(device_province,device_city,device_country,device_address) 
+			like concat('%',#{device_address},'%')
+		</if>
+		<if test=' device_no != null and device_no != "" '>
+			and device_no like concat('%',#{device_no},'%')
+		</if>
+		<if test=' apply_state != null and apply_state != "" '>
+			and apply_state=#{apply_state}
+		</if>
+		<if test=' clerk_id != null and clerk_id != "" '>
+			and clerk_id=#{clerk_id}
+		</if>
+		order by create_time desc
+	</select>
+</mapper>	

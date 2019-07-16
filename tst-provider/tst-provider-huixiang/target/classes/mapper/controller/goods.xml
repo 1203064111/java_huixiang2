@@ -1,0 +1,1240 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.controller.GoodsDaoC">
+	<insert id="insertShop" parameterType="shopBean" useGeneratedKeys="true" keyProperty="shop_id">
+		insert into tst_shop
+		(member_id,shop_name,shop_img,shop_address,
+		shop_account,shop_phone,create_time,update_time)
+		values
+		(#{member_id},#{shop_name},#{shop_img},#{shop_address},
+		#{shop_account},#{shop_phone},now(),now())
+	</insert>
+	
+	<select id="getMonthStatistics" parameterType="productClassBean" resultType="Map">
+		select sum(order_actual_price)price,DATE_FORMAT(create_time,'%Y-%d')create_time from tst_order_merchants  as a
+
+		where  FIND_IN_SET(a.order_state,'wait_send,wait_receive,wait_assessment,end')
+		<if test=' start_time != null and start_time != "" '>
+			and a.create_time>=#{start_time}
+		</if>
+		<if test=' end_time != null and end_time != "" '>
+			and #{end_time}>=a.create_time
+		</if>
+		group by DATE_FORMAT(create_time,'%Y-%m')
+	</select>
+
+	<select id="getGoodsStatistics" parameterType="goodsBean" resultType="Map">
+		select a.goods_id,a.goods_name,
+		(case when a.goods_type =1 then "正常商品" 
+		when a.goods_type=2 then "完税跨境商品" else "跨境商品" end)goods_type,
+		sum(case when c.order_merchants_id is null then 0 else b.batch_stock*d.product_count end)goods_num
+		,sum(case when c.order_merchants_id is null then 0 else b.batch_stock*d.product_count*b.batch_price end)sales_price
+		,sum(case when c.order_merchants_id is null then 0 else b.batch_stock*d.product_count*(b.batch_price+b.logistics_price+
+		b.taxation_price) end)toatl_price
+		,sum(case when c.order_merchants_id is null then 0 else b.batch_stock*d.product_count*b.logistics_price end)logistics_price
+		,sum(case when c.order_merchants_id is null then 0 else b.batch_stock*d.product_count*b.taxation_price end)taxation_price
+		
+		from tst_goods as a
+		left join tst_order_product_batch as b
+		on a.goods_id=b.goods_id 
+		
+		left join tst_order_product as d
+		on b.order_product_id=d.order_product_id 
+		
+		left join tst_order_merchants as c
+		on b.order_merchants_id=c.order_merchants_id
+		
+		and FIND_IN_SET(c.order_state,'wait_receive,wait_assessment,end')
+		where a.is_delete='0'
+		<if test=' goods_name != null and goods_name != "" '>
+			and goods_name like concat('%',#{goods_name},'%')
+		</if>
+		group by a.goods_id
+		<if test=' sort == "taxation_price" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+		
+		
+		<if test=' sort == "logistics_price" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+		
+		<if test=' sort == "goods_num" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+		
+		<if test=' sort == "sales_price" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+		
+		<if test=' sort == "toatl_price" '>
+			order by toatl_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+	</select>
+	
+	<select id="getProductClassStatistics" parameterType="productBean" resultType="Map">		
+		select 
+		class_name as name,IFNULL(sum(case when c.order_merchants_id is null then 0 else b.product_actual_price end),0)value
+		
+		from tst_product_class as a
+
+		inner join tst_product as d
+		on FIND_IN_SET(a.class_uuid,d.class_parent_uuid)
+
+		left join tst_order_product as b
+		on d.product_id=b.product_id 
+		<if test=' start_time != null and start_time != "" '>
+			and b.create_time>#{start_time}
+		</if>
+		<if test=' end_time != null and end_time != "" '>
+			and #{end_time}>b.create_time
+		</if>
+		
+		left join tst_order_merchants as c
+		on b.order_merchants_id=c.order_merchants_id
+		and FIND_IN_SET(c.order_state,'wait_send,wait_receive,wait_assessment,end')
+		
+		where a.is_delete='0' and a.parent_id='-1'
+		group by a.class_id
+		
+	</select>
+	
+	<select id="getProductStatistics" parameterType="productBean" resultType="Map">
+		select a.product_id,a.product_name,
+		(case when a.product_type =1 then "正常商品" 
+		when a.product_type=2 then "完税跨境商品" else "跨境商品" end)product_type,
+		(select count(*) from tst_footprint where product_id=a.product_id and is_delete='0')browser_count,
+		sum(case when c.order_merchants_id is null then 0 else b.product_count end)product_count,
+		
+		sum(case when c.order_state='wait_send' then 0 else b.product_actual_price end)order_actual_price,
+		
+		sum(b.product_actual_price)order_total_price,
+		sum(case when c.shop_id is null then 0 else c.profit_price end)profit_price,
+		(select sum((batch_price+logistics_price+taxation_price)*batch_stock) from tst_order_product_batch 
+		where FIND_IN_SET(order_product_id,GROUP_CONCAT(b.order_product_id)) )batch_price
+		
+		from tst_product as a
+		left join tst_order_product as b
+		on a.product_id=b.product_id 
+		left join tst_order_merchants as c
+		on b.order_merchants_id=c.order_merchants_id
+		and FIND_IN_SET(c.order_state,'wait_send,wait_receive,wait_assessment,end')
+		
+		where a.is_delete='0'
+		<if test=' product_name != null and product_name != "" '>
+			and a.product_name like concat('%',#{product_name},'%')
+		</if>
+		group by a.product_id
+		
+		<if test=' sort == "browser_count" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+		<if test=' sort == "product_count" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+		<if test=' sort == "order_actual_price" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+		<if test=' sort == "order_total_price" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+		<if test=' sort == "batch_price" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+		<if test=' sort == "profit_price" '>
+			order by sales_price
+			<if test=' sort_type == "desc" '>
+				desc
+			</if>
+			<if test=' sort_type == "asc" '>
+				asc
+			</if>
+		</if>
+	</select>
+
+	<select id="getGoodsStocks" parameterType="goodsStockBean" resultType="goodsStockBean">
+		select * from tst_goods_stock
+		where goods_id=#{goods_id} and is_delete='0'
+		and goods_stock>0
+		order by create_time desc
+	</select>
+	
+	<insert id="insertSupplierGoods" parameterType="supplierGoodsBean">
+		insert into tst_supplier_goods
+		(supplier_id,goods_id,goods_price,create_time,update_time)
+		values
+		(#{supplier_id},#{goods_id},#{goods_price},now(),now())
+	</insert>
+	
+	<update id="updateSupplierGoods" parameterType="supplierGoodsBean">
+		update tst_supplier_goods
+		set update_time=now()
+		<if test=' goods_price != null and goods_price != "" '>
+			,goods_price=#{goods_price}
+		</if>
+		where supplier_goods_id=#{supplier_goods_id}
+	</update>
+	
+	<update id="deleteSupplierGoodss" parameterType="supplierGoodsBean">
+		update tst_supplier_goods
+		set update_time=now(),is_delete='1'
+		where FIND_IN_SET(supplier_goods_id,#{supplier_goods_ids})
+	</update>
+	
+	<select id="getSupplierGoodss" parameterType="supplierGoodsBean" resultType="supplierGoodsBean">
+        select a.*,b.goods_name,b.goods_sku
+        from tst_supplier_goods as a
+        inner join tst_goods as b 
+        on a.goods_id = b.goods_id and b.is_delete='0'
+        <if test=' goods_name != null and goods_name != "" '>
+        	and b.goods_name like concat('%',#{goods_name},'%')
+        </if>
+        <if test=' goods_sku != null and goods_sku != "" '>
+        	and b.goods_sku like concat('%',#{goods_sku},'%')
+        </if>
+        where a.supplier_id = #{supplier_id} and a.is_delete = '0'
+        order by create_time desc
+    </select>
+    
+    <select id="getSupplierGoodsDetail" parameterType="supplierGoodsBean" resultType="supplierGoodsBean">
+        select * from tst_supplier_goods 
+        where supplier_id = #{supplier_id} and is_delete = '0' and goods_id=#{goods_id}
+    </select>
+    
+	
+
+    <select id="getReleaseProductSpecificationGoodss" parameterType="productSpecificationGoodsBean" resultType="Map">
+        select a.goods_id, a.goods_num * b.specification_stock as stock
+        from tst_product_specification_goods as a
+                 inner join tst_product_specification as b on a.specification_id = b.specification_id
+        where a.specification_uuid = #{specification_uuid}
+          and a.is_delete = '1'
+    </select>
+
+    <select id="getProductSpecificationGoodsStock" parameterType="productSpecificationGoodsBean" resultType="Map">
+        select a.goods_num * b.specification_stock as specification_stock
+        from tst_product_specification_goods as a
+                 inner join tst_product_specification as b on a.specification_id = b.specification_id
+        where a.specification_goods_id = #{specification_goods_id}
+    </select>
+
+    <select id="getProductSpecificationGoodss" parameterType="productSpecificationGoodsBean"
+            resultType="productSpecificationGoodsBean">
+        select a.*, b.goods_name, b.goods_stock
+        ,(select ROUND(sum(batch_price+logistics_price+taxation_price)/count(*),2)
+        	from tst_goods_batch
+			where goods_id=a.goods_id and is_delete='0')cost_price
+        from tst_product_specification_goods as a
+        inner join tst_goods as b on a.goods_id = b.goods_id and b.is_delete = '0'
+        
+        where a.specification_id = #{specification_id}
+          and a.is_delete = '0'
+    </select>
+
+    <update id="deleteProductSpecificationGoodss" parameterType="productSpecificationGoodsBean">
+        update tst_product_specification_goods
+        set update_time        = now(),
+            is_delete          = '1',
+            specification_uuid = #{specification_uuid}
+        where product_id = #{product_id}
+          and is_delete = '0'
+    </update>
+
+    <update id="updateProductSpecificationGoods" parameterType="productSpecificationGoodsBean">
+        update tst_product_specification_goods
+        set update_time=now(),
+        is_delete='0'
+        <if test=' goods_num != null and goods_num != "" '>
+            ,goods_num=#{goods_num}
+        </if>
+        where specification_goods_id=#{specification_goods_id}
+    </update>
+
+    <insert id="insertProductSpecificationGoods" parameterType="productSpecificationGoodsBean">
+        insert into tst_product_specification_goods (product_id,
+                                                     specification_id,
+                                                     goods_id,
+                                                     goods_num,
+                                                     create_time,
+                                                     update_time)
+        values (#{product_id}, #{specification_id}, #{goods_id}, #{goods_num}, now(), now())
+    </insert>
+
+
+    <select id="getProductSpecifications" parameterType="productSpecificationBean"
+            resultType="productSpecificationBean">
+        select *
+        from tst_product_specification
+        where product_id = #{product_id}
+          and is_delete = '0'
+    </select>
+
+    <select id="getProductSpecificationsById" parameterType="productSpecificationBean"
+            resultType="productSpecificationBean">
+        select *
+        from tst_product_specification
+        where specification_id = #{specification_id}
+          and is_delete = '0'
+    </select>
+
+    <update id="deleteProductSpecifications" parameterType="productSpecificationBean">
+        update tst_product_specification
+        set update_time = now(),
+            is_delete   = '1'
+        where product_id = #{product_id}
+    </update>
+
+    <update id="updateProductSpecification" parameterType="productSpecificationBean">
+        update tst_product_specification
+        set update_time=now(),
+        is_delete='0'
+        <if test=' specification_name != null and specification_name != "" '>
+            ,specification_name=#{specification_name}
+        </if>
+        <if test=' specification_img != null and specification_img != "" '>
+            ,specification_img=#{specification_img}
+        </if>
+        <if test=' specification_stock != null and specification_stock != "" '>
+            ,specification_stock=#{specification_stock}
+        </if>
+
+        <if test=' specification_origin_price != null and specification_origin_price != "" '>
+            ,specification_origin_price=#{specification_origin_price}
+        </if>
+        <if test=' specification_price != null and specification_price != "" '>
+            ,specification_price=#{specification_price}
+        </if>
+        <if test=' group_price != null and group_price != "" '>
+            ,group_price=#{group_price}
+        </if>
+        <if test=' profit_price != null and profit_price != "" '>
+            ,profit_price=#{profit_price}
+        </if>
+        where specification_id=#{specification_id}
+    </update>
+
+    <insert id="insertProductSpecification" parameterType="productSpecificationBean" useGeneratedKeys="true"
+            keyProperty="specification_id">
+        insert into tst_product_specification (product_id,
+                                               specification_name,
+                                               specification_img,
+                                               specification_stock,
+                                               specification_origin_price,
+                                               specification_price,
+                                               group_price,
+                                               profit_price,
+                                               create_time,
+                                               update_time)
+        values (#{product_id},
+                #{specification_name},
+                #{specification_img},
+                IFNULL(#{specification_stock},0),
+                IFNULL(#{specification_origin_price}, 0),
+                (case when #{specification_price}  is null or #{specification_price}='' then 0 else #{specification_price} end),
+                (case when #{group_price}  is null or #{group_price}='' then 0 else #{group_price} end),
+                IFNULL(#{profit_price},0),
+                now(),
+                now())
+    </insert>
+
+
+    <insert id="insertProduct" parameterType="productBean" useGeneratedKeys="true" keyProperty="product_id">
+        insert into tst_product (product_name,
+        product_desc,product_img,product_way,is_online,
+                                 product_imgs,
+                                 product_type,
+                                 product_url_desc,
+                                 product_address,
+                                 product_origin_price,
+                                 product_origin_min_price,
+                                 product_origin_max_price,
+                                 product_now_price,
+                                 product_now_min_price,
+                                 product_now_max_price,
+                                 profit_price,
+                                 profit_min_price,
+                                 profit_max_price,
+                                 freight_id,
+                                 service_ids,
+                                 class_id,
+                                 class_uuid,
+                                 class_parent_uuid,
+                                 is_group,
+                                 is_promotion,
+                                 is_recommand,
+                                 product_state,
+                                 sort,
+                                 create_time,
+                                 update_time,specification_count,
+                                 group_need_time,group_need_count)
+        values (#{product_name},
+        #{product_desc},#{product_img},#{product_way},#{is_online},
+                #{product_imgs},
+                #{product_type},
+                #{product_url_desc},
+                #{product_address},
+                #{product_origin_price},
+                #{product_origin_min_price},
+                #{product_origin_max_price},
+                #{product_now_price},
+                #{product_now_min_price},
+                #{product_now_max_price},
+                #{profit_price},
+                #{profit_min_price},
+                #{profit_max_price},
+                #{freight_id},
+                #{service_ids},
+                #{class_id},
+                (select class_uuid from tst_product_class where class_id = #{class_id}),
+                (select class_parent_uuid from tst_product_class where class_id = #{class_id}),
+                #{is_group},
+                #{is_promotion},
+                #{product_state},
+                #{is_recommand},
+                IFNULL((select a.sort + 1
+                        from (select sort from tst_product where is_delete = '0' order by sort desc limit 0,1) a), "1"),
+                now(),
+                now(),#{specification_count},
+                #{group_need_time},#{group_need_count})
+    </insert>
+
+    <update id="updateProduct" parameterType="productBean">
+        update tst_product
+        set update_time=now()
+        <if test=' is_recommand != null and is_recommand != "" '>
+            ,is_recommand=#{is_recommand}
+        </if>
+        <if test=' group_need_time != null and group_need_time != "" '>
+            ,group_need_time=#{group_need_time}
+        </if>
+        <if test=' group_need_count != null and group_need_count != "" '>
+            ,group_need_count=#{group_need_count}
+        </if>
+        
+        <if test=' is_online != null and is_online != "" '>
+            ,is_online=#{is_online}
+        </if>
+        <if test=' product_way != null and product_way != "" '>
+            ,product_way=#{product_way}
+        </if>
+        
+        <if test=' specification_count != null and specification_count != "" '>
+            ,specification_count=#{specification_count}
+        </if>
+        <if test=' product_name != null and product_name != "" '>
+            ,product_name=#{product_name}
+        </if>
+        <if test=' product_desc != null and product_desc != "" '>
+            ,product_desc=#{product_desc}
+        </if>
+        <if test=' product_img != null and product_img != "" '>
+            ,product_img=#{product_img}
+        </if>
+        <if test=' product_imgs != null and product_imgs != "" '>
+            ,product_imgs=#{product_imgs}
+        </if>
+        <if test=' product_type != null and product_type != "" '>
+            ,product_type=#{product_type}
+        </if>
+        <if test=' product_url_desc != null and product_url_desc != "" '>
+            ,product_url_desc=#{product_url_desc}
+        </if>
+        <if test=' product_address != null and product_address != "" '>
+            ,product_address=#{product_address}
+        </if>
+        <if test=' product_origin_price != null and product_origin_price != "" '>
+            ,product_origin_price=#{product_origin_price}
+        </if>
+        <if test=' product_origin_min_price != null and product_origin_min_price != "" '>
+            ,product_origin_min_price=#{product_origin_min_price}
+        </if>
+        <if test=' product_origin_max_price != null and product_origin_max_price != "" '>
+            ,product_origin_max_price=#{product_origin_max_price}
+        </if>
+        <if test=' product_now_price != null and product_now_price != "" '>
+            ,product_now_price=#{product_now_price}
+        </if>
+        <if test=' product_now_min_price != null and product_now_min_price != "" '>
+            ,product_now_min_price=#{product_now_min_price}
+        </if>
+        <if test=' product_now_max_price != null and product_now_max_price != "" '>
+            ,product_now_max_price=#{product_now_max_price}
+        </if>
+        <if test=' profit_price != null and profit_price != "" '>
+            ,profit_price=#{profit_price}
+        </if>
+        <if test=' profit_min_price != null and profit_min_price != "" '>
+            ,profit_min_price=#{profit_min_price}
+        </if>
+        <if test=' profit_max_price != null and profit_max_price != "" '>
+            ,profit_max_price=#{profit_max_price}
+        </if>
+        
+        <if test=' group_price != null and group_price != "" '>
+            ,group_price=#{group_price}
+        </if>
+        <if test=' group_min_price != null and group_min_price != "" '>
+            ,group_min_price=#{group_min_price}
+        </if>
+        <if test=' group_max_price != null and group_max_price != "" '>
+            ,group_max_price=#{group_max_price}
+        </if>
+        
+        <if test=' product_stock != null and product_stock != "" '>
+            ,product_stock=#{product_stock}
+        </if>
+        <if test=' freight_id != null and freight_id != "" '>
+            ,freight_id=#{freight_id}
+        </if>
+        <if test=' service_ids != null and service_ids != "" '>
+            ,service_ids=#{service_ids}
+        </if>
+        <if test=' class_id != null and class_id != "" '>
+            ,class_id=#{class_id}
+            ,class_uuid=(select class_uuid from tst_product_class where class_id=#{class_id})
+            ,class_parent_uuid=(select class_parent_uuid from tst_product_class where class_id=#{class_id})
+        </if>
+
+        <if test=' is_group != null and is_group != "" '>
+            ,is_group=#{is_group}
+        </if>
+        <if test=' is_promotion != null and is_promotion != "" '>
+            ,is_promotion=#{is_promotion}
+        </if>
+        <if test=' product_state != null and product_state != "" '>
+            ,product_state=#{product_state}
+        </if>
+        <if test=' sort != null and sort != "" '>
+            ,sort=#{sort}
+        </if>
+
+        where product_id=#{product_id}
+    </update>
+
+    <update id="deleteProduct" parameterType="productBean">
+        update tst_product
+        set update_time = now(),
+            is_delete   = '1'
+        where FIND_IN_SET(product_id, #{product_ids})
+    </update>
+
+    <select id="getProductDetail" parameterType="productBean" resultType="productBean">
+        select a.*, b.parent_id as class_parent_id
+        from tst_product as a
+                 left join tst_product_class as b on a.class_id = b.class_id and b.is_delete = '0'
+        where a.product_id = #{product_id}
+          and a.is_delete = '0'
+    </select>
+
+    <select id="getProducts" parameterType="productBean" resultType="productBean">
+        select a.*, b.class_name
+        from tst_product as a
+        left join tst_product_class as b on a.class_id = b.class_id and b.is_delete = '0'
+        where a.is_delete = '0'
+        <if test=' product_name != null and product_name != "" '>
+        	and product_name like concat('%',#{product_name},'%')
+        </if>
+        <if test=' product_way != null and product_way != "" '>
+        	and product_way = #{product_way}
+        </if>
+        order by a.create_time desc
+    </select>
+    
+    <select id="getMallProductsNoPage" parameterType="productBean" resultType="productBean">
+        select a.product_id,a.product_name
+        from tst_product as a
+        where a.is_delete = '0'
+        <if test=' product_name != null and product_name != "" '>
+        	and product_name like concat('%',#{product_name},'%')
+        </if>
+        <if test=' product_way != null and product_way != "" '>
+        	and product_way = #{product_way}
+        </if>
+        order by a.create_time desc
+    </select>
+
+
+    <select id="getFreightCitys" parameterType="freightCityBean"
+            resultType="freightCityBean">
+        select *
+        from tst_freight_city
+
+        where freight_id = #{freight_id}
+          and is_delete = '0'
+    </select>
+
+    <insert id="insertFreightCity" parameterType="freightCityBean"
+            useGeneratedKeys="true" keyProperty="freight_city_id">
+        insert into tst_freight_city (freight_id,
+                                      city_ids,
+                                      city_names,
+                                      province_ids,
+                                      province_names,
+                                      freight_range,
+                                      freight_price,
+                                      freight_add_range,
+                                      freight_add_price,
+                                      create_time,
+                                      update_time)
+        values (#{freight_id},
+                #{city_ids},
+                #{city_names},
+                #{province_ids},
+                #{province_names},
+                #{freight_range},
+                #{freight_price},
+                #{freight_add_range},
+                #{freight_add_price},
+                now(),
+                now())
+    </insert>
+
+
+    <update id="updateFreightCity" parameterType="freightCityBean">
+        update
+                tst_freight_city
+        set update_time       = now(),
+            is_delete         = '0',
+            province_ids      = #{province_ids},
+            province_names    = #{province_names},
+            city_ids          = #{city_ids},
+            city_names        = #{city_names},
+            freight_range     = #{freight_range},
+            freight_price     = #{freight_price},
+            freight_add_range = #{freight_add_range},
+            freight_add_price = #{freight_add_price}
+        where freight_city_id = #{freight_city_id}
+    </update>
+
+    <update id="deleteFreightCitys" parameterType="freightCityBean">
+        update
+                tst_freight_city
+        set update_time = now(),
+            is_delete   = '1'
+        where freight_id = #{freight_id}
+    </update>
+
+
+    <insert id="insertFreightFree" parameterType="freightCityBean"
+            useGeneratedKeys="true" keyProperty="freight_city_id">
+        insert into tst_freight_free (freight_id,
+                                      city_ids,
+                                      city_names,
+                                      province_ids,
+                                      province_names,
+                                      free_range,
+                                      create_time,
+                                      update_time)
+        values (#{freight_id},
+                #{city_ids},
+                #{city_names},
+                #{province_ids},
+                #{province_names},
+                #{free_range},
+                now(),
+                now())
+    </insert>
+
+
+    <update id="updateFreightFree" parameterType="freightCityBean">
+        update
+                tst_freight_free
+        set update_time    = now(),
+            is_delete      = '0',
+            province_ids   = #{province_ids},
+            province_names = #{province_names},
+            city_ids       = #{city_ids},
+            city_names     = #{city_names},
+            free_range     = #{free_range}
+        where freight_free_id = #{freight_free_id}
+    </update>
+
+    <update id="deleteFreightFrees" parameterType="freightCityBean">
+        update
+                tst_freight_free
+        set update_time = now(),
+            is_delete   = '1'
+        where freight_id = #{freight_id}
+    </update>
+
+    <select id="getFreightFrees" parameterType="freightFreeBean"
+            resultType="freightFreeBean">
+        select *
+        from tst_freight_free
+        where is_delete = '0'
+          and freight_id = #{freight_id}
+    </select>
+
+
+    <select id="getFreightDetail" parameterType="freightBean"
+            resultType="freightBean">
+        select *
+        from tst_freight
+        where is_delete = '0'
+          and freight_id = #{freight_id}
+    </select>
+
+    <select id="getFreights" parameterType="freightBean" resultType="freightBean">
+        select a.*
+        from tst_freight as a
+
+        where a.is_delete = '0'
+
+        order by a.sort desc
+    </select>
+
+    <select id="getFreightsNoPage" parameterType="freightBean"
+            resultType="freightBean">
+        select a.*
+        from tst_freight as a
+
+        where a.is_delete = '0'
+
+        order by a.sort desc
+    </select>
+
+    <insert id="insertFreight" parameterType="freightBean"
+            useGeneratedKeys="true" keyProperty="freight_id">
+        insert into tst_freight (freight_name,
+                                 freight_way,
+                                 freight_type,
+                                 sort,
+                                 create_time,
+                                 update_time,
+                                 merchants_id,
+                                 freight_range,
+                                 freight_price,
+                                 freight_add_range,
+                                 freight_add_price)
+        values (#{freight_name},
+                #{freight_way},
+                #{freight_type},
+                IFNULL((select a.sort + 1
+                        from (select sort from tst_freight where is_delete = '0' order by sort desc limit 0,1) a), "1"),
+                now(),
+                now(),
+                #{merchants_id},
+                #{freight_range},
+                #{freight_price},
+                #{freight_add_range},
+                #{freight_add_price})
+    </insert>
+
+    <update id="updateFreight" parameterType="freightBean">
+        update tst_freight
+        set update_time=now()
+        <if test=' freight_name != null and freight_name != "" '>
+            ,freight_name=#{freight_name}
+        </if>
+        <if test=' freight_range != null and freight_range != "" '>
+            ,freight_range=#{freight_range}
+        </if>
+        <if test=' freight_price != null and freight_price != "" '>
+            ,freight_price=#{freight_price}
+        </if>
+        <if test=' freight_add_range != null and freight_add_range != "" '>
+            ,freight_add_range=#{freight_add_range}
+        </if>
+        <if test=' freight_add_price != null and freight_add_price != "" '>
+            ,freight_add_price=#{freight_add_price}
+        </if>
+
+        <if test=' freight_way != null and freight_way != "" '>
+            ,freight_way=#{freight_way}
+        </if>
+        <if test=' freight_type != null and freight_type != "" '>
+            ,freight_type=#{freight_type}
+        </if>
+        <if test=' sort != null and sort != "" '>
+            ,sort=#{sort}
+        </if>
+        where freight_id=#{freight_id}
+    </update>
+
+    <update id="deleteFreight" parameterType="freightBean">
+        update tst_freight
+        set update_time = now(),
+            is_delete   = '1'
+        where FIND_IN_SET(freight_id, #{freight_ids})
+    </update>
+
+
+    <insert id="insertService" parameterType="serviceBean">
+        insert into tst_service (service_name, create_time, update_time)
+        values (#{service_name}, now(), now())
+    </insert>
+
+    <update id="updateService" parameterType="serviceBean">
+        update tst_service
+        set update_time=now()
+        <if test=' service_name != null and service_name != "" '>
+            ,service_name=#{service_name}
+        </if>
+        where service_id=#{service_id}
+    </update>
+
+    <update id="deleteService" parameterType="serviceBean">
+        update tst_service
+        set update_time = now(),
+            is_delete   = '1'
+        where FIND_IN_SET(service_id, #{service_ids})
+    </update>
+
+    <select id="getServiceDetail" parameterType="serviceBean" resultType="serviceBean">
+        select *
+        from tst_service
+        where service_id = #{service_id}
+          and is_delete = '0'
+    </select>
+
+    <select id="getServices" parameterType="serviceBean" resultType="serviceBean">
+        select *
+        from tst_service
+        where is_delete = '0'
+        order by create_time desc
+    </select>
+
+
+    <insert id="insertProductClass" parameterType="productClassBean">
+        insert into tst_product_class (class_id,
+                                       class_name,
+                                       class_img,
+                                       class_state,
+                                       parent_id,
+                                       class_uuid,
+                                       class_parent_uuid,
+                                       sort,
+                                       create_time,
+                                       update_time)
+        values (#{class_id},
+                #{class_name},
+                #{class_img},
+                #{class_state},
+                #{parent_id},
+                #{class_uuid},
+                CONCAT(IFNULL((select a.class_parent_uuid
+                               from (select class_parent_uuid from tst_product_class where class_id = #{parent_id})
+                                            a), ""), ",", #{class_uuid}),
+                IFNULL((select a.sort + 1
+                        from (select sort
+                              from tst_product_class
+                              where parent_id = #{parent_id}
+                                and is_delete = '0'
+                              order by sort desc
+                              limit 0,1) a), "1"),
+                now(),
+                now())
+    </insert>
+
+    <update id="updateProductClass" parameterType="productClassBean">
+        update tst_product_class
+        set update_time=now()
+        <if test=' class_name != null and class_name != "" '>
+            ,class_name=#{class_name}
+        </if>
+        <if test=' class_img != null and class_img != "" '>
+            ,class_img=#{class_img}
+        </if>
+        <if test=' class_state != null and class_state != "" '>
+            ,class_state=#{class_state}
+        </if>
+        <if test=' sort != null and sort != "" '>
+            ,sort=#{sort}
+        </if>
+        where class_id=#{class_id}
+    </update>
+
+    <update id="deleteProductClass" parameterType="productClassBean">
+        update tst_product_class
+        set update_time = now(),
+            is_delete   = '1'
+        where FIND_IN_SET(class_id, #{class_ids})
+           or FIND_IN_SET(parent_id, #{class_ids})
+    </update>
+
+    <select id="getProductClassDetail" parameterType="productClassBean" resultType="productClassBean">
+        select *
+        from tst_product_class
+        where class_id = #{class_id}
+          and is_delete = '0'
+    </select>
+
+    <select id="getProductClasss" parameterType="productClassBean" resultType="productClassBean">
+        select *
+        from tst_product_class
+        where is_delete = '0'
+          and parent_id = #{parent_id}
+        order by create_time desc
+    </select>
+
+    <resultMap id="classList" type="productClassBean">
+        <result column="class_id" property="class_id"/>
+        <result column="class_name" property="class_name"/>
+        <result column="class_img" property="class_img"/>
+        <result column="class_type" property="class_type"/>
+        <result column="parent_id" property="parent_id"/>
+        <result column="sort" property="sort"/>
+        <association property="productClassBeans" resultMap="classList2">
+        </association>
+    </resultMap>
+
+    <resultMap id="classList2" type="productClassBean">
+        <result column="class_id2" property="class_id"/>
+        <result column="class_name2" property="class_name"/>
+        <result column="class_img2" property="class_img"/>
+        <result column="parent_id2" property="parent_id"/>
+        <result column="class_type2" property="class_type"/>
+        <result column="sort2" property="sort"/>
+    </resultMap>
+
+    <select id="getProductClassLinks" parameterType="productClassBean"
+            resultMap="classList">
+        select a.class_id,
+               a.class_name,
+               a.parent_id,
+               a.sort,
+               a.class_img,
+               b.class_id   as class_id2,
+               b.class_name as class_name2,
+               b.parent_id  as parent_id2,
+               b.sort       as sort2,
+               b.class_img  as class_img2
+
+        from tst_product_class as a
+                 left join tst_product_class as b on b.parent_id = a.class_id and b.is_delete = '0'
+        where a.parent_id = '-1'
+          and a.is_delete = '0'
+    </select>
+
+
+    <insert id="insertGoodsStock" parameterType="goodsStockBean">
+        insert into tst_goods_stock 
+        (goods_id, stock_type, goods_stock, create_time, update_time
+        ,batch_id,product_id)
+        values 
+        (#{goods_id}, #{stock_type}, #{goods_stock}, now(), now()
+        ,#{batch_id},#{product_id})
+    </insert>
+
+    <insert id="insertGoodsBatch" parameterType="goodsBatchBean" useGeneratedKeys="true" keyProperty="batch_id">
+        insert into tst_goods_batch 
+        (purchase_id,batch_no, goods_id, batch_price, batch_stock,batch_now_stock,
+        purchase_stock,batch_unqualified_stock, 
+        logistics_price,taxation_price,
+        create_time, update_time)
+        values 
+        (IFNULL(#{purchase_id},'-1'),#{batch_no}, #{goods_id}, #{batch_price}, #{batch_stock},#{batch_stock},
+        #{purchase_stock},#{batch_unqualified_stock}, 
+        #{logistics_price},#{taxation_price},
+        now(), now())
+    </insert>
+
+    <update id="updateGoodsBatch" parameterType="goodsBatchBean">
+        update tst_goods_batch
+        set update_time=now()
+        <if test=' batch_no != null and batch_no != "" '>
+            ,batch_no=#{batch_no}
+        </if>
+        <if test=' batch_price != null and batch_price != "" '>
+            ,batch_price=#{batch_price}
+        </if>
+        <if test=' batch_stock != null and batch_stock != "" '>
+            ,batch_stock=#{batch_stock}
+        </if>
+        where batch_id=#{batch_id}
+    </update>
+
+    <update id="deleteGoodsBatch" parameterType="goodsBatchBean">
+        update tst_goods_batch
+        set update_time = now(),
+            is_delete   = '1'
+        where FIND_IN_SET(batch_id, #{batch_ids})
+    </update>
+
+    <select id="getGoodsBatchDetail" parameterType="goodsBatchBean" resultType="goodsBatchBean">
+        select *
+        from tst_goods_batch
+        where batch_id = #{batch_id}
+          and is_delete = '0'
+    </select>
+
+    <select id="getGoodsBatchs" parameterType="goodsBatchBean" resultType="goodsBatchBean">
+        select * from tst_goods_batch
+        where is_delete = '0'
+          and goods_id = #{goods_id} 
+        order by create_time desc
+    </select>
+
+    <update id="updateGoodsStock" parameterType="goodsBean">
+        update tst_goods
+        set update_time = now(),
+            goods_stock = goods_stock + #{goods_stock}
+        where goods_id = #{goods_id}
+    </update>
+
+    <insert id="insertGoods" parameterType="goodsBean">
+        insert into tst_goods (goods_name, goods_sku, goods_img, goods_type, create_time, update_time)
+        values (#{goods_name}, #{goods_sku}, #{goods_img}, #{goods_type}, now(), now())
+    </insert>
+
+    <select id="selectGoodsByRecord" parameterType="goodsBean" resultType="goodsBean">
+        select *
+        from tst_goods
+        where is_delete = '0' and record_id=#{record_id}
+        <if test=' goods_id != null and goods_id != "" '>
+            and goods_id!=#{goods_id}
+        </if>
+        order by create_time desc
+    </select>
+
+
+    <update id="updateGoods" parameterType="goodsBean">
+        update tst_goods
+        set update_time=now()
+        <if test=' goods_name != null and goods_name != "" '>
+            ,goods_name=#{goods_name}
+        </if>
+        <if test=' goods_sku != null and goods_sku != "" '>
+            ,goods_sku=#{goods_sku}
+        </if>
+        <if test=' goods_img != null and goods_img != "" '>
+            ,goods_img=#{goods_img}
+        </if>
+        <if test=' goods_type != null and goods_type != "" '>
+            ,goods_type=#{goods_type}
+        </if>
+        <if test=' goods_stock != null and goods_stock != "" '>
+            ,goods_stock=#{goods_stock}
+        </if>
+        where goods_id=#{goods_id}
+    </update>
+
+    <update id="deleteGoods" parameterType="goodsBean">
+        update tst_goods
+        set update_time = now(),
+            is_delete   = '1'
+        where FIND_IN_SET(goods_id, #{goods_ids})
+    </update>
+
+    <select id="getGoodsDetail" parameterType="goodsBean" resultType="goodsBean">
+        select *
+        from tst_goods
+        where goods_id = #{goods_id}
+          and is_delete = '0'
+    </select>
+
+    <select id="getGoodss" parameterType="goodsBean" resultType="goodsBean">
+        select a.*,b.record_status,b.record_id 
+        ,(select ROUND(sum(batch_price+logistics_price+taxation_price)/count(*),2)
+        	from tst_goods_batch
+			where goods_id=a.goods_id and is_delete='0')cost_price
+        from tst_goods as a
+        left join tst_record as b
+        on a.goods_sku=b.record_sku and b.is_delete='0'
+        <if test=' record_status != null and record_status != "" and record_status != "-1" '>
+        	and b.record_status=#{record_status}
+        </if>
+        where a.is_delete='0'
+        <if test=' record_status == "-1" '>
+        	and b.record_id is null
+        </if>
+        <if test=' record_status != null and record_status != "" and record_status != "-1" '>
+        	and b.record_id is not null
+        </if>
+        <if test=' goods_type != null and goods_type != "" '>
+            and a.goods_type = #{goods_type}
+        </if>
+        <if test=' goods_sku != null and goods_sku != "" '>
+            and a.goods_sku like concat('%',#{goods_sku},'%')
+        </if>
+        <if test=' goods_name != null and goods_name != "" '>
+            and a.goods_name like concat('%',#{goods_name},'%')
+        </if>
+        order by create_time desc
+    </select>
+
+
+    <insert id="insertSupplier" parameterType="supplierBean">
+        insert into tst_supplier (supplier_name, create_time, update_time)
+        values (#{supplier_name}, now(), now())
+    </insert>
+
+    <update id="updateSupplier" parameterType="supplierBean">
+        update tst_supplier
+        set update_time=now()
+        <if test=' supplier_name != null and supplier_name != "" '>
+            ,supplier_name=#{supplier_name}
+        </if>
+        where supplier_id=#{supplier_id}
+    </update>
+
+    <update id="deleteSupplier" parameterType="supplierBean">
+        update tst_supplier
+        set update_time = now(),
+            is_delete   = '1'
+        where FIND_IN_SET(supplier_id, #{supplier_ids})
+    </update>
+
+    <select id="getSupplierDetail" parameterType="supplierBean" resultType="supplierBean">
+        select *
+        from tst_supplier
+        where supplier_id = #{supplier_id} and is_delete = '0'
+    </select>
+
+    <select id="getSuppliers" parameterType="supplierBean" resultType="supplierBean">
+        select * from tst_supplier
+        where is_delete = '0'
+        <if test=' supplier_name != null and supplier_name != "" '>
+        	and supplier_name like concat('%',#{supplier_name},'%')
+        </if>
+        order by create_time desc
+    </select>
+
+
+    <insert id="insertPurchase" parameterType="purchaseBean" useGeneratedKeys="true" keyProperty="purchase_id">
+        insert into tst_purchase 
+        (supplier_id,purchase_title, purchase_desc, create_time, update_time)
+        values 
+        (#{supplier_id},#{purchase_title}, #{purchase_desc}, now(), now())
+    </insert>
+
+    <update id="updatePurchase" parameterType="purchaseBean">
+        update tst_purchase
+        set update_time=now()
+        <if test=' purchase_title != null and purchase_title != "" '>
+            ,purchase_title=#{purchase_title}
+        </if>
+        <if test=' purchase_desc != null and purchase_desc != "" '>
+            ,purchase_desc=#{purchase_desc}
+        </if>
+        <if test=' purchase_state != null and purchase_state != "" '>
+            ,purchase_state=#{purchase_state}
+        </if>
+        where purchase_id=#{purchase_id}
+    </update>
+
+    <update id="deletePurchase" parameterType="purchaseBean">
+        update tst_purchase
+        set update_time = now(),
+            is_delete   = '1'
+        where FIND_IN_SET(purchase_id, #{purchase_ids})
+    </update>
+
+    <select id="getPurchaseDetail" parameterType="purchaseBean" resultType="purchaseBean">
+        select a.*,b.supplier_name from tst_purchase as a
+        inner join tst_supplier as b
+        on a.supplier_id=b.supplier_id and b.is_delete='0'
+        where a.purchase_id = #{purchase_id} and a.is_delete = '0'
+    </select>
+
+    <select id="getPurchases" parameterType="purchaseBean" resultType="purchaseBean">
+        select *
+        from tst_purchase
+        where is_delete = '0'
+        order by create_time desc
+    </select>
+    
+    <insert id="insertPurchaseGoods" parameterType="purchaseGoodsBean">
+    	insert into tst_purchase_goods
+    	(purchase_id,goods_id,goods_price,purchase_stock,
+    	create_time,update_time)
+    	values
+    	(#{purchase_id},#{goods_id},#{goods_price},#{purchase_stock},
+    	now(),now())
+    </insert>
+    
+    <update id="updatePurchaseGoods" parameterType="purchaseGoodsBean">
+    	update tst_purchase_goods
+    	set update_time=now(),is_delete='0'
+    	,goods_price=#{goods_price},purchase_stock=#{purchase_stock}
+    	
+    	where purchase_goods_id=#{purchase_goods_id}
+    </update>
+    
+    <update id="deletePurchaseGoodss" parameterType="purchaseGoodsBean">
+    	update tst_purchase_goods
+    	set update_time=now(),is_delete='1'
+    	where purchase_id=#{purchase_id}
+    </update>
+    
+    <select id="getPurchaseGoodss" parameterType="purchaseGoodsBean" resultType="purchaseGoodsBean">
+    	select a.*,b.goods_name from tst_purchase_goods as a
+    	inner join tst_goods as b
+    	on a.goods_id=b.goods_id and b.is_delete='0'
+    	where a.purchase_id=#{purchase_id} and a.is_delete='0'
+    </select>
+    
+    <select id="getPurchaseBatchs" parameterType="purchaseBean" resultType="goodsBatchBean">
+    	select a.goods_id,a.goods_price as batch_price,a.purchase_stock,
+		b.batch_stock,b.batch_unqualified_stock,b.batch_no,c.goods_name
+		from tst_purchase_goods as a 
+		left join tst_goods_batch as b
+		on a.purchase_id=b.purchase_id and a.goods_id=b.goods_id and b.is_delete='0'
+		inner join tst_goods as c
+		on a.goods_id=c.goods_id 
+		where a.purchase_id=#{purchase_id} and a.is_delete='0'
+    </select>
+    
+</mapper>

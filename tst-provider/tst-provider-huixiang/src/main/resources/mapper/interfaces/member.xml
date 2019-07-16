@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.interfaces.MemberDao">
+	
+	<insert id='test' parameterType="List">
+		insert into tst_test
+		(name,value)
+		values
+		<foreach collection="list" item="item" index="index" separator=",">
+			(#{item.NAME},#{item.CODE})
+		</foreach>
+	</insert>
+	
+	<insert id="insertMemberWithdraw" parameterType="memberWithdrawBean" useGeneratedKeys="true" keyProperty="withdraw_id">
+		insert into tst_member_withdraw
+		(member_id,withdraw_price,
+		create_time,update_time)
+		values
+		(#{member_id},#{withdraw_price},
+		now(),now())
+	</insert>
+	
+	<insert id="insertMemberBill" parameterType="memberBillBean">
+		insert into tst_member_bill
+		(member_id,bill_desc,bill_type,
+		bill_value,create_time,update_time,
+		withdraw_id)
+		values
+		(#{member_id},#{bill_desc},#{bill_type},
+		#{bill_value},now(),now(),
+		#{withdraw_id})
+	</insert>
+
+	<select id="getMemberBills" parameterType="memberBillBean" resultType="memberBillBean">
+		select * from tst_member_bill
+		
+		where member_id=#{member_id} and is_delete='0'
+		<if test=' bill_type != null and bill_type != "" '>
+			and bill_type=#{bill_type}
+		</if>
+		order by create_time desc
+	</select>
+
+	<select id="getCollectionStatistics" parameterType="memberBean" resultType="Map">
+		select sum(collection_type='1') collection_product_count,sum(collection_type='2') collection_shop_count from tst_collection
+		where member_id=#{member_id} and is_delete='0'
+	</select>
+
+	<select id="getFootprintStatistics" parameterType="memberBean" resultType="Map">
+		select count(*) as footprint_count from(
+			select a.product_id from tst_footprint as a
+			inner join tst_product as b
+			on a.product_id=b.product_id and b.is_delete='0' and b.product_state='1'
+			where a.member_id=#{member_id} and a.is_delete='0'
+			group by a.product_id
+		) as t
+		
+	</select>
+	
+	<select id="getGroupStatistics" parameterType="memberBean" resultType="Map">
+		select sum(group_state='1') group_ing_count,sum(group_state='2')group_end_count
+		,sum(group_state='3')group_fail_count from tst_order_merchants 
+		where order_type='group' and group_state!=0 and member_id=#{member_id}
+	</select>
+	
+	<select id="getMemberRelaname" parameterType="realnameBean" resultType="realnameBean">
+		select * from tst_member_realname
+		where member_id=#{member_id} and is_delete='0'
+	</select>
+	
+	<update id="updateMemberRealname" parameterType="realnameBean">
+		update tst_member_realname
+		set update_time=now(),
+		realname_name=#{realname_name},
+		realname_mobile=#{realname_mobile},
+		realname_card=#{realname_card},
+		realname_state='1'
+		where member_id=#{member_id} and is_delete='0'
+	</update>
+
+	<insert id="insetMemberRelaname" parameterType="realnameBean">
+		insert into tst_member_realname
+		(member_id,realname_name,realname_mobile,
+		realname_card,create_time,update_time)
+		values
+		(#{member_id},#{realname_name},#{realname_mobile},
+		#{realname_card},now(),now())
+	</insert>
+
+	<update id="payPassword" parameterType="memberBean">
+		update tst_member
+		set update_time=now()
+		,pay_password=#{pay_password}
+		where 1=1
+		<if test=' member_id != null and member_id != "" '>
+			and member_id=#{member_id}
+		</if>
+
+		<if test=' member_account != null and member_account != "" '>
+			and member_account=#{member_account}
+		</if>
+	</update>
+
+	
+
+	<update id="updateMemberDetail" parameterType="memberBean">
+		update tst_member
+		set update_time=now()
+		<if test=' member_balance != null and member_balance != "" '>
+			,member_balance = #{member_balance}
+		</if>
+		<if test=' member_balance != null and member_balance != "" '>
+			,member_balance = #{member_balance}
+		</if>
+		<if test=' member_img != null and member_img != "" '>
+			,member_img = #{member_img}
+		</if>
+		<if test=' fans_num != null '>
+			,fans_num = #{fans_num}
+		</if>
+		<if test=' collection_num != null  '>
+			,collection_num = #{collection_num}
+		</if>
+		<if test=' follow_num != null '>
+			,follow_num = #{follow_num}
+		</if>
+		<if test=' footprint_num != null  '>
+			,footprint_num = #{footprint_num}
+		</if>
+		<if test=' well_num != null '>
+			,well_num = #{well_num}
+		</if>
+		<if test=' member_ing_withdrawal != null and member_ing_withdrawal != "" '>
+			,member_ing_withdrawal = #{member_ing_withdrawal}
+		</if>
+		
+		<if
+			test=' weixin_lite_open_id != null and weixin_lite_open_id != "" '>
+			,weixin_lite_open_id = #{weixin_lite_open_id}
+		</if>
+	
+		<if test=' weixin_pub_open_id != null and weixin_pub_open_id != "" '>
+			,weixin_pub_open_id = #{weixin_pub_open_id}
+		</if>
+		<if test=' wx_open_id != null and wx_open_id != "" '>
+			,wx_open_id = #{wx_open_id}
+		</if>
+		<if test=' qq_open_id != null and qq_open_id != "" '>
+			,qq_open_id = #{qq_open_id}
+		</if>
+		
+		<if test=' member_nick_name != null and member_nick_name != "" '>
+			,member_nick_name = #{member_nick_name}
+		</if>
+
+
+		<if test=' member_password != null and member_password != "" '>
+			,member_password = #{member_password}
+		</if>
+
+		<if test=' member_token != null and member_token != "" '>
+			,member_token=#{member_token}
+		</if>
+		<where>
+			<if test=' member_id != null and member_id != "" '>
+				member_id=#{member_id}
+			</if>
+
+			<if test=' member_account != null and member_account != "" '>
+				and member_account=#{member_account}
+			</if>
+		</where>
+	</update>
+
+	
+
+	<insert id="registerMember" parameterType="memberBean"
+		useGeneratedKeys="true" keyProperty="member_id">
+		insert into tst_member
+		(weixin_pub_open_id,weixin_lite_open_id,member_type,member_account,member_token,member_password
+		,create_time,update_time
+		,member_nick_name,member_img,unionid)
+		values
+		(#{weixin_pub_open_id},#{weixin_lite_open_id},IFNULL(#{member_type},'1'),#{member_account},#{member_token},#{member_password}
+		,now(),now()
+		,#{member_nick_name},#{member_img},#{unionid})
+	</insert>
+	
+	<select id="getOtherMemberDetail" parameterType="memberBean"
+		resultType="memberBean">
+		select a.*,(case when b.follow_id != '' then 1 else 0 end ) as is_follow
+		from tst_member as a 
+		left join tst_challenge_follow as b
+		on  b.parent_member_id = a.member_id
+		and b.is_delete =0
+		and b.member_id=#{member_id}
+		where 1=1
+		
+		<if test=' parent_member_id != null and parent_member_id != "" '>
+			and a.member_id=#{parent_member_id}
+		</if>
+		group by a.member_id 
+	</select>
+	<select id="getMemberDetail" parameterType="memberBean"
+		resultType="memberBean">
+		select * from tst_member
+		where 1=1
+		
+		<if test=' is_delete == null or  is_delete == "" '>
+			and is_delete='0'
+		</if>
+		<if test=' is_delete != null and  is_delete != "" '>
+			and is_delete=#{is_delete}
+		</if>
+		<if test=' unionid != null and unionid != "" '>
+			and unionid=#{unionid}
+		</if>
+		<if test=' weixin_lite_open_id != null and weixin_lite_open_id != "" '>
+			and weixin_lite_open_id=#{weixin_lite_open_id}
+		</if>
+	
+		<if test=' wx_open_id != null and wx_open_id != "" '>
+			and wx_open_id=#{wx_open_id}
+		</if>
+		<if test=' qq_open_id != null and qq_open_id != "" '>
+			and qq_open_id=#{qq_open_id}
+		</if>
+		<if test=' ins_open_id != null and ins_open_id != "" '>
+			and ins_open_id=#{ins_open_id}
+		</if>
+		<if test=' fb_open_id != null and fb_open_id != "" '>
+			and fb_open_id=#{fb_open_id}
+		</if>
+		<if test=' member_account != null and member_account != "" '>
+			and member_account=#{member_account}
+		</if>
+		
+		<if test=' member_type != null and member_type != "" '>
+			and member_type=#{member_type}
+		</if>
+		<if test=' member_password != null and member_password != "" '>
+			and member_password=#{member_password}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			and member_id=#{member_id}
+		</if>
+	</select>
+
+	
+	<select id="getMemberMsgsDetail" parameterType="memberMsgBean"
+		resultType="memberMsgBean">
+		select * from tst_member_msg
+		where 1=1 and is_delete='0'
+		and
+		msg_id=#{msg_id}
+	</select>
+	
+	<select id="getMemberMsgs" parameterType="memberMsgBean"
+		resultType="memberMsgBean">
+		select * from tst_member_msg
+		where 1=1 and is_delete='0'
+		<if test=' msg_type != null and msg_type != "" '>
+			and FIND_IN_SET(msg_type,#{msg_type})
+		</if>
+		<if test="is_read!=null and is_read!=''">
+			and is_read=#{is_read}
+		</if>
+		<if test="member_id!=null and member_id!=''">
+			and member_id=#{member_id}
+		</if>
+		order by create_time desc
+	</select>
+	
+	
+	<update id="updateMemberMsgDetail" parameterType="memberMsgBean">
+		update tst_member_msg
+		set update_time=now()
+		<if test="is_read!=null and is_read!=''">
+			,is_read=#{is_read}
+		</if>
+		where 1=1 and msg_id=#{msg_id}
+	</update>
+
+	
+</mapper>

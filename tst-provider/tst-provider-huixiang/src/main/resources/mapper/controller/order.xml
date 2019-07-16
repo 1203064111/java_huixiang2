@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.controller.OrderDaoC">
+
+	 <select id="getPlatformStatistics" resultType="Map">
+	 	select 
+		(select count(*) from tst_product where is_delete='0')product_count,
+		(select count(*) from tst_footprint where is_delete='0')browser_count,
+		(select count(*) from tst_member where is_delete='0')member_count,
+		(select count(*) from tst_order_merchants)order_count,
+		(select sum(order_actual_price) from tst_order_merchants where order_state != 'wait_pay' and order_state != 'cencel')order_total_sales,
+		(select sum(order_actual_price) from tst_order_merchants where order_state != 'wait_pay' and order_state != 'cencel' and order_type!='device')order_shop_sales,
+		(select sum(order_actual_price) from tst_order_merchants where order_state != 'wait_pay' and order_state != 'cencel' and order_type ='device')order_device_sales
+	 </select>
+	 
+	<insert id="insertOrderLogistics" parameterType="orderLogisticsBean">
+		insert into tst_order_logistics
+		(order_id,order_merchants_id,logistics_no,logistics_name,
+		logistics_pinyin,send_company,send_name,send_mobile,
+		send_privince,send_city,send_country,send_address,
+		send_zip_code,create_time,update_time)
+		values
+		(#{order_id},#{order_merchants_id},#{logistics_no},#{logistics_name},
+		#{logistics_pinyin},#{send_company},#{send_name},#{send_mobile},
+		#{send_privince},#{send_city},#{send_country},#{send_address},
+		#{send_zip_code},now(),now())
+	</insert>
+	
+	
+	 <select id="getOrderLogisticsCompanys" parameterType="orderLogisticsCompanyBean" resultType="orderLogisticsCompanyBean">
+	 	select * from tst_order_logistics_company 
+		where is_delete = 0
+		order by create_time desc
+	 </select>
+	 
+	 <select id="getOrderLogisticsCompanyDetail" parameterType="orderLogisticsCompanyBean" resultType="orderLogisticsCompanyBean">
+	 	select * from tst_order_logistics_company 
+		where is_delete = 0 
+		and logistics_id = #{logistics_id}
+	 </select>
+	 
+	 <insert id="insertOrderLogisticsCompany" parameterType="orderLogisticsCompanyBean" useGeneratedKeys="true" keyProperty="logistics_id">
+	 	insert into tst_order_logistics_company
+	 	(logistics_name,logistics_pinyin,create_time,update_time)
+	 	value
+	 	(#{logistics_name},#{logistics_pinyin},now(),now())
+	 </insert>
+	 
+	<update id="updateOrderLogisticsCompany" parameterType="orderLogisticsCompanyBean">
+		update tst_order_logistics_company 
+		set update_time = now()
+		<if test=' logistics_name != null and logistics_name != "" '>
+			,logistics_name = #{logistics_name}
+		</if>
+		<if test=' logistics_pinyin != null and logistics_pinyin != "" '>
+			,logistics_pinyin = #{logistics_pinyin}
+		</if>
+		where logistics_id = #{logistics_id}
+	</update>
+	
+	<update id="deleteOrderLogisticsCompany" parameterType="orderLogisticsCompanyBean">
+		update tst_order_logistics_company 
+		set update_time = now()
+		,is_delete = 1
+		where FIND_IN_SET(logistics_id,#{logistics_ids})
+	</update>
+	
+	<insert id="insertOrderProductBatch" parameterType="orderProductBatchBean">
+		insert into tst_order_product_batch
+		(order_product_goods_id,order_id,
+		order_merchants_id,order_product_id,goods_id,
+		batch_id,purchase_id,batch_no,batch_price,batch_stock,
+		batch_now_stock,create_time,update_time)
+		values
+		(#{order_product_goods_id},#{order_id},
+		#{order_merchants_id},#{order_product_id},#{goods_id},
+		#{batch_id},#{purchase_id},#{batch_no},#{batch_price},#{batch_stock},
+		#{batch_now_stock},now(),now())
+	</insert>
+	
+	<select id="getGoodsBatchs" parameterType="goodsBatchBean" resultType="goodsBatchBean">
+		select batch_id, 0 as batch_stock,batch_no,purchase_id,
+		batch_price,batch_now_stock,goods_id
+		from tst_goods_batch
+        where is_delete = '0' and goods_id = #{goods_id} and batch_now_stock>0
+        
+        order by create_time desc
+	</select>
+
+	<update id="updateGoodsBatchStock" parameterType="goodsBatchBean">
+		update tst_goods_batch
+		set update_time=now(),
+		batch_now_stock=batch_now_stock-#{batch_now_stock}
+		where batch_id=#{batch_id}  and (batch_now_stock-#{batch_now_stock})>=0
+	</update>
+		
+	<update id="sendStorehouse" parameterType="orderMerchantsBean">
+		update tst_order_merchants
+		set  update_time=now(),
+		is_send='1',
+		send_storehouse_time=now()
+		where order_merchants_id=#{order_merchants_id}
+	</update>
+	
+	<select id="getOrderProductGoodss" parameterType="orderProductGoodsBean" resultType="orderProductGoodsBean">
+		<!-- select * from tst_order_product_goods 
+		where order_merchants_id=#{order_merchants_id} and is_delete='0' -->
+		
+		
+		select a.order_product_goods_id,
+		a.order_id,a.order_merchants_id,a.order_product_id,
+		a.goods_id,a.goods_name,a.goods_sku,
+		a.goods_type
+		
+		,a.goods_num*b.product_count goods_num from tst_order_product_goods as a
+		inner join tst_order_product as b
+		on a.order_product_id=b.order_product_id
+		where a.order_merchants_id=#{order_merchants_id} and a.is_delete='0'
+	</select>
+	
+	<update id="sendOrderMerchants" parameterType="orderMerchantsBean">
+		update tst_order_merchants
+		set  update_time=now(),
+		order_state='wait_receive',
+		send_time=now()
+		where order_merchants_id=#{order_merchants_id}
+	</update>
+
+	<select id="getOrderGroupDetail" parameterType="orderGroupBean" resultType="orderGroupBean">
+		select * from tst_order_group
+		where order_group_id=#{order_group_id}
+	</select>
+	
+	<select id="getOrderProducts" parameterType="orderProductBean" resultType="orderProductBean">
+		select * from tst_order_product
+		where order_merchants_id=#{order_merchants_id}
+	</select>
+	
+	<select id="getOrderAddressDetail" parameterType="orderAddressBean" resultType="orderAddressBean">
+		select * from tst_order_address
+		where order_id=#{order_id}
+	</select>
+
+	<select id="getOrderMerchantsDetail" parameterType="orderMerchantsBean" resultType="orderMerchantsBean">
+		select * from tst_order_merchants
+		where  order_merchants_id=#{order_merchants_id}
+	</select>
+	
+	
+	<select id="getOrderMerchants" parameterType="orderMerchantsBean" resultType="orderMerchantsBean">
+		select a.*,b.address_name,b.address_mobile,c.product_name
+		from tst_order_merchants as a
+		inner join tst_order_address as b
+		on a.order_id=b.order_id 
+		<if test=' address_name != null and address_name != "" '>
+			and b.address_name like concat('%',#{address_name},'%')
+		</if>
+		<if test=' address_mobile != null and address_mobile != "" '>
+			and b.address_mobile like concat('%',#{address_mobile},'%')
+		</if>
+		inner join tst_order_product as c
+		on a.order_merchants_id=c.order_merchants_id
+		<if test=' product_name != null and product_name != "" '>
+			and c.product_name like concat('%',#{product_name},'%')
+		</if>
+		<if test=' class_name != null and class_name != "" '>
+			inner join tst_product as d
+			on c.product_id=d.product_id
+			inner join tst_product_class as e
+			on d.class_id=e.class_id
+			and e.class_name like concat('%',#{class_name},'%')
+		</if>
+		where 1=1 
+		<if test=' order_merchants_no != null and order_merchants_no != "" '>
+			and (a.order_merchants_no like concat('%',#{order_merchants_no},'%') or a.order_no like concat('%',#{order_merchants_no},'%'))
+		</if>
+		<if test=' order_state != null and order_state != "" '>
+			and FIND_IN_SET(a.order_state,#{order_state})
+		</if>
+		<if test=' pay_way != null and pay_way != "" '>
+			and FIND_IN_SET(a.pay_way,#{pay_way})
+		</if>
+		<if test=' order_type != null and order_type != "" '>
+			and FIND_IN_SET(a.order_type,#{order_type})
+		</if>
+		<if test=' start_time != null and start_time != "" '>
+			and a.create_time>=#{start_time}
+		</if>
+		<if test=' end_time != null and end_time != "" '>
+			and #{end_time}>=a.create_time
+		</if>
+		<if test=' is_delete != null and is_delete != "" '>
+			and #{is_delete}=a.is_delete
+		</if>
+		<if test=' device_no != null and device_no != "" '>
+			and #{device_no}=a.device_no
+		</if>
+		<if test=' is_cross_border != null and is_cross_border != "" '>
+			and #{is_cross_border}=a.is_cross_border
+		</if>
+		<if test=' cross_border_state != null and cross_border_state != "" '>
+			and FIND_IN_SET(a.cross_border_state,#{cross_border_state})
+		</if>
+		group by a.order_merchants_id
+		order by create_time desc
+	</select>
+	
+	<select id="exportOrderMerchants" parameterType="orderMerchantsBean" resultType="Map">
+		select a.*,b.address_name,b.address_mobile,c.product_name,
+		(case when order_type='goods' then '正常订单' 
+			when order_type='group' then '团购订单'
+			when order_type='device' then '售货机订单'
+			when order_type='app' then '视频订单' else '' end)order_type_show,
+		(case when order_state='cancel' then '已取消' 
+			when order_state='wait_pay' then '待付款'
+			when order_state='wait_send' then '待发货'
+			when order_state='wait_receive' then '待收货'
+			when order_state='wait_assessment' then '待评价'
+			when order_state='end' then '已结束'
+			else '' end)order_state_show
+		from tst_order_merchants as a
+		inner join tst_order_address as b
+		on a.order_id=b.order_id 
+		<if test=' address_name != null and address_name != "" '>
+			and b.address_name like concat('%',#{address_name},'%')
+		</if>
+		<if test=' address_mobile != null and address_mobile != "" '>
+			and b.address_mobile like concat('%',#{address_mobile},'%')
+		</if>
+		inner join tst_order_product as c
+		on a.order_merchants_id=c.order_merchants_id
+		<if test=' product_name != null and product_name != "" '>
+			and c.product_name like concat('%',#{product_name},'%')
+		</if>
+		<if test=' class_name != null and class_name != "" '>
+			inner join tst_product as d
+			on c.product_id=d.product_id
+			inner join tst_product_class as e
+			on d.class_id=e.class_id
+			and e.class_name like concat('%',#{class_name},'%')
+		</if>
+		where 1=1 
+		<if test=' order_merchants_no != null and order_merchants_no != "" '>
+			and (a.order_merchants_no like concat('%',#{order_merchants_no},'%') or a.order_no like concat('%',#{order_merchants_no},'%'))
+		</if>
+		<if test=' order_state != null and order_state != "" '>
+			and FIND_IN_SET(a.order_state,#{order_state})
+		</if>
+		<if test=' pay_way != null and pay_way != "" '>
+			and FIND_IN_SET(a.pay_way,#{pay_way})
+		</if>
+		<if test=' order_type != null and order_type != "" '>
+			and FIND_IN_SET(a.order_type,#{order_type})
+		</if>
+		<if test=' start_time != null and start_time != "" '>
+			and a.create_time>=#{start_time}
+		</if>
+		<if test=' end_time != null and end_time != "" '>
+			and #{end_time}>=a.create_time
+		</if>
+		<if test=' is_delete != null and is_delete != "" '>
+			and #{is_delete}=a.is_delete
+		</if>
+		<if test=' device_no != null and device_no != "" '>
+			and #{device_no}=a.device_no
+		</if>
+		<if test=' is_cross_border != null and is_cross_border != "" '>
+			and #{is_cross_border}=a.is_cross_border
+		</if>
+		<if test=' cross_border_state != null and cross_border_state != "" '>
+			and FIND_IN_SET(a.cross_border_state,#{cross_border_state})
+		</if>
+		group by a.order_merchants_id
+		order by create_time desc
+	</select>
+</mapper>

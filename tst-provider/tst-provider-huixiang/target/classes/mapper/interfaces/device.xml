@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.interfaces.DeviceDao">
+	<select id="getMemberDeviceDetail" parameterType="memberDeviceBean" resultType="memberDeviceBean">
+		select * from tst_member_device
+		where member_id=#{member_id} and device_id=#{device_id}
+	</select>
+	
+	<select id="getDeviceCargoDetail" parameterType="deviceCargoBean" resultType="Map">
+		select a.product_id,b.device_no,b.device_name,a.cargo_no,d.product_type,
+		d.product_name,c.specification_id,c.specification_id,c.specification_img,
+		c.specification_price
+		from tst_device_cargo as a
+		inner join tst_device as b
+		on a.device_id=b.device_id and b.device_no=#{device_id}
+		inner join tst_product as d
+		on a.product_id=d.product_id
+		inner join tst_product_specification as c
+		on a.product_id=c.product_id
+		where cargo_no=#{cargo_no} 
+		limit 0,1
+	</select>
+	
+	<select id="getDeviceReplenishmentCargos" parameterType="deviceReplenishmentCargoBean" resultType="deviceReplenishmentCargoBean">
+		select a.*,b.product_name,b.product_origin_price,
+		b.product_now_price,b.profit_price from tst_device_replenishment_cargo as a
+		left join tst_product as b
+		on a.product_id=b.product_id and b.is_delete='0'
+		where a.replenishment_id=#{replenishment_id} and a.is_delete='0'
+	</select>
+	
+	<select id="getDeviceReplenishments" parameterType="deviceReplenishmentBean" resultType="deviceReplenishmentBean">
+		select * from tst_device_replenishment
+		where member_id=#{member_id} and device_id=#{device_id} and is_delete='0'
+		order by create_time desc
+	</select>
+
+	<select id="getLastDeviceReplenishment" parameterType="deviceReplenishmentBean" resultType="deviceReplenishmentBean">
+		select * from tst_device_replenishment
+		where  device_id=#{device_id} and is_delete='0'
+		order by create_time desc
+		limit 0,1
+	</select>
+	
+	<insert id="insertDeviceReplenishmentCargos" parameterType="deviceReplenishmentBean" >
+		insert into tst_device_replenishment_cargo
+		(replenishment_id,cargo_id,cargo_no,product_id,
+		replenishment_stock,create_time,update_time)
+		
+		select #{replenishment_id},cargo_id,cargo_no,product_id,
+		(cargo_num-product_stock),now(),now() from tst_device_cargo
+		where device_id=#{device_id} and is_delete='0'
+	</insert>
+	
+	
+	<insert id="insertDeviceReplenishment" parameterType="deviceReplenishmentBean" useGeneratedKeys="true" keyProperty="replenishment_id">
+		insert into tst_device_replenishment
+		(member_id,device_id,create_time,update_time)
+		values
+		(IFNULL(#{member_id},"-1"),#{device_id},now(),now())
+	</insert>
+	
+	
+	<select id="getDeviceCargos" parameterType="deviceCargoBean" resultType="deviceCargoBean">
+		select a.*,b.product_name,b.product_origin_price,
+		b.product_now_price,b.profit_price,b.product_type from tst_device_cargo as a
+		left join tst_product as b
+		on a.product_id=b.product_id and b.is_delete='0'
+		where a.device_id=#{device_id} and a.is_delete='0'
+	</select>
+	
+	<select id="getMemberDevices" parameterType="deviceBean" resultType="deviceBean">
+		select * from tst_device
+		where member_id=#{member_id} and is_delete='0'
+	</select>
+	
+	<select id="getMemberApplyDevices" parameterType="memberDeviceBean" resultType="deviceBean">
+		select a.apply_state,b.device_version,device_no,device_name,device_img,
+		b.device_province,b.device_city,b.device_country,
+		b.device_address,b.device_longitude,b.device_latitude
+		from tst_member_device as a
+		inner join tst_device as b
+		on a.device_id=b.device_id and b.is_delete='0'
+		where a.member_id=#{member_id} and a.is_delete='0'
+	</select>
+	
+	<insert id="insertMemberDevice" parameterType="memberDeviceBean">
+		insert into tst_member_device
+		(member_id,device_id,contact_name,contact_mobile,contact_remark,
+		create_time,update_time)
+		values
+		(#{member_id},#{device_id},#{contact_name},#{contact_mobile},#{contact_remark},
+		now(),now())
+	</insert>
+	
+	<update id="updateDevice" parameterType="deviceBean">
+		update tst_device
+		set update_time=now()
+		<if test=' remind_stock != null and remind_stock != "" '>
+			,remind_stock=#{remind_stock}
+		</if>
+		<if test=' apply_state != null and apply_state != "" '>
+			,apply_state=#{apply_state}
+		</if>
+		where device_id=#{device_id}
+	</update>
+
+	<select id="getDevices" parameterType="deviceBean" resultType="deviceBean">
+		select a.*,(case when b.member_device_id is null then 0 else 1 end)is_apply from tst_device as a
+		left join tst_member_device as b
+		on a.device_id=b.device_id and b.is_delete='0' 
+		and b.member_id=#{member_id}
+		where a.is_delete='0'
+	</select>
+	
+	<select id="getDeviceDetail" parameterType="deviceBean" resultType="deviceBean">
+		select * from tst_device
+		where is_delete='0' and device_id=#{device_id}
+	</select>
+</mapper>

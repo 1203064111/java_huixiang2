@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.interfaces.AddressDao">
+	
+	
+	<select id="getCityHots" parameterType="cityHotBean" resultType="cityHotBean">
+		select * from tst_city_hot
+		where is_delete = 0 
+		order by create_time desc
+	</select>
+	
+	<select id="getCitysV2" parameterType="cityBean" resultType="Map">
+		select id as value,name as name from tst_city
+		where is_delete='0' and parent_id=#{parent_id}
+	</select>
+	
+	<select id="getCitysGroupPY" resultType="Map">
+		select b.first_pingyin from tst_city as a
+		inner join tst_city as b
+		on a.id=b.parent_id and b.is_delete='0'
+		where a.parent_id='-1' and a.is_delete='0'
+		group by first_pingyin
+	</select>
+	
+	<select id="getCitysByPY" parameterType="Map" resultType="cityBean">
+		select b.* from tst_city as a
+		inner join tst_city as b
+		on a.id=b.parent_id and b.is_delete='0'
+		and b.first_pingyin=#{first_pingyin}
+		where a.parent_id='-1' and a.is_delete='0'
+	</select>
+
+	<resultMap id="cityList" type="cityBean"> 
+		<result column="id" property="id"/>
+		<result column="name" property="name"/>
+		<result column="parent_id" property="parent_id"/>
+		<result column="full_pinyin" property="full_pinyin"/>
+		<result column="first_pingyin" property="first_pingyin"/>
+		<result column="create_time" property="create_time"/>
+        <association property="cityBeans"  resultMap="cityList2">
+        </association>  
+    </resultMap>
+    
+    <resultMap id="cityList2" type="cityBean">
+    	<result column="id2" property="id"/>
+		<result column="name2" property="name"/>
+		<result column="parent_id2" property="parent_id"/>
+		<result column="full_pinyin2" property="full_pinyin"/>
+		<result column="first_pingyin2" property="first_pingyin"/>
+		<result column="create_time2" property="create_time"/>
+		<association property="cityBeans"  resultMap="cityList3">
+        </association>  
+    </resultMap>
+    
+    <resultMap id="cityList3" type="cityBean">
+    	<result column="id3" property="id"/>
+		<result column="name3" property="name"/>
+		<result column="parent_id3" property="parent_id"/>
+		<result column="full_pinyin3" property="full_pinyin"/>
+		<result column="first_pingyin3" property="first_pingyin"/>
+		<result column="create_time3" property="create_time"/>
+    </resultMap>
+	
+	<select id="getCitys" parameterType="cityBean" resultMap="cityList">
+		select a.id,a.name,a.parent_id,a.create_time,a.first_pingyin,a.full_pinyin,
+		b.id as id2,b.name as name2,b.parent_id as parent_id2,b.create_time as create_time2,b.first_pingyin as first_pingyin2,b.full_pinyin as full_pinyin2,
+		c.id as id3,c.name as name3,c.parent_id as parent_id3,c.create_time as create_time2,c.first_pingyin as first_pingyin3,c.full_pinyin as full_pigyin3 
+		
+		from tst_city as a
+		left join tst_city as b 
+		on b.parent_id=a.id and b.is_delete='0'
+		left join tst_city as c
+		on c.parent_id=b.id and c.is_delete='0'
+		
+		where a.parent_id='-1' and a.is_delete='0'
+	</select>
+	
+	<insert id="insertAddress" parameterType="AddressBean" useGeneratedKeys="true" keyProperty="address_id">
+		insert into tst_member_address
+		(member_id,address_mobile,address_name,address_province,address_city,address_country,
+		address_detailed,address_road,address_zip_code,create_time,update_time,is_default) 
+		values
+		(#{member_id},#{address_mobile},#{address_name},#{address_province},#{address_city},
+		#{address_country},#{address_detailed},#{address_road},#{address_zip_code},now(),now(),#{is_default})
+	</insert>
+	
+	<update id="deleteAddress" parameterType="AddressBean">
+		update tst_member_address 
+		set is_delete = 1
+		where address_id = #{address_id} and member_id=#{member_id}
+	</update>
+	
+	<update id="updateAddress" parameterType="AddressBean">
+		update tst_member_address
+		set update_time = now()
+		<if test=' address_mobile != null and address_mobile != "" '>
+			,address_mobile = #{address_mobile}
+		</if>
+		<if test='address_name != null and address_name != "" '>
+			,address_name = #{address_name}
+		</if>
+		<if test='address_province != null and address_province != "" '>
+			,address_province = #{address_province}
+		</if>
+		<if test='address_city != null and address_city != "" '>
+			,address_city = #{address_city}
+		</if>
+		<if test='address_country != null and address_country != "" '>
+			,address_country = #{address_country}
+		</if>
+		<if test='address_detailed != null and address_detailed != "" '>
+			,address_detailed = #{address_detailed}
+		</if>
+		<if test='address_road != null and address_road != "" '>
+			,address_road = #{address_road}
+		</if>
+		<if test='address_zip_code != null and address_zip_code != "" '>
+			,address_zip_code = #{address_zip_code}
+		</if>
+		<if test='is_default != null and is_default != "" '>
+			,is_default = #{is_default}
+		</if>
+		where address_id=#{address_id} and member_id=#{member_id}
+	</update>
+	
+	<select id="getMemberAddress" parameterType="AddressBean" resultType="AddressBean">
+		select * from tst_member_address
+		where is_delete = 0
+		and member_id = #{member_id}
+		order by is_default desc,update_time desc
+	</select>
+	
+	<update id="updateDefaultAddress" parameterType="AddressBean">
+		update tst_member_address 
+		set is_default=(case when address_id=#{address_id} then '1' else '0' end)
+		where member_id=#{member_id} and is_delete='0'
+	</update>
+	
+	<select id="getDefaultAddress" parameterType="addressBean" resultType="addressBean">
+		select * from tst_member_address 
+		where member_id=#{member_id} 
+		and is_default=1 
+		and is_delete=0 
+	</select>
+	
+	<select id="getAddressDetail" parameterType="addressBean" resultType="addressBean">
+		select * from tst_member_address 
+		where address_id=#{address_id}  
+		and is_delete=0 
+	</select>
+	
+</mapper>

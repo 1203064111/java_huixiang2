@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.interfaces.ProductCarDao">
+	<select id="getProductCars" parameterType="ProductCarBean" resultType="ProductCarBean">
+		select a.*,b.product_name,c.specification_name,c.specification_img,c.specification_price from tst_product_car as a
+		inner join tst_product as b
+		on a.product_id=b.product_id and b.is_delete='0'
+		inner join tst_product_specification as c
+		on a.specification_id=c.specification_id and c.is_delete='0'
+		where a.member_id=#{member_id} and a.is_delete='0'
+		and shop_id=#{shop_id}
+	</select>
+
+	<select id="getProductShops" parameterType="ProductCarBean" resultType="Map">
+		select b.shop_id,b.shop_name,b.shop_img,sum(car_num)car_num from tst_product_car as a
+		inner join tst_shop as b
+		on a.shop_id=b.shop_id and b.is_delete='0'
+		where a.member_id=#{member_id} and a.is_delete='0'
+		group by a.shop_id
+	</select>
+
+    <select id="getProductCarByProductCarBean" resultType="ProductCarBean">
+        select *
+        from tst_product_car
+        where is_delete = '0'
+        <if test=' member_id != null and member_id != "" '>
+            and member_id=#{member_id}
+        </if>
+    </select>
+
+    <select id="getProductCarsNum" parameterType="ProductCarBean" resultType="int">
+        SELECT (case when sum(car_num) is null then 0 else sum(car_num) end) as car_num
+        from tst_product_car
+        where shop_id = #{shop_id} and member_id=#{member_id}
+        
+    </select>
+
+    <update id="updateProductCarNum" parameterType="ProductCarBean">
+        update tst_product_car
+        set car_num  = #{car_num},
+            update_time = now()
+        WHERE car_id = #{car_id}
+          and is_delete = '0'
+    </update>
+
+
+    <update id="deleteProductCar" parameterType="java.util.List">
+        update tst_product_car
+        set is_delete='1', update_time = now()
+        where FIND_IN_SET(car_id,#{car_ids})
+    </update>
+	
+	<select id="getProductCarDetail" parameterType="productCarBean" resultType="productCarBean">
+		select * from tst_product_car
+		where member_id=#{member_id} and product_id=#{product_id} and is_delete='0' and specification_id=#{specification_id}
+		<if test=' shop_id != null and shop_id != "" '>
+			and shop_id=#{shop_id}
+		</if>
+	</select>
+
+    <insert id="insertProductCar" useGeneratedKeys="true" keyProperty="car_id">
+        insert into 
+        tst_product_car 
+        (shop_id,member_id,product_id,specification_id,car_num,
+         create_time,update_time)
+        values 
+        (#{shop_id}, #{member_id}, #{product_id}, #{specification_id}, #{car_num}, 
+        now(), now())
+    </insert>
+
+
+</mapper>
+
+

@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.controller.MemberDaoC">
+	
+	<update id="updateMemberDetail" parameterType="memberBean">
+		update tst_member
+		set update_time=now()
+		<if test=' member_end_withdrawal != null and member_end_withdrawal != "" '>
+			,member_end_withdrawal = #{member_end_withdrawal}
+		</if>
+		<if test=' member_ing_withdrawal != null and member_ing_withdrawal != "" '>
+			,member_ing_withdrawal = #{member_ing_withdrawal}
+		</if>
+		where member_id=#{member_id}
+	</update>
+
+	<update id="updateMemberBill" parameterType="memberBillBean">
+		update tst_member_bill
+		set create_time=now(),update_time=now(),
+		bill_desc='余额提现打款成功'
+		where withdraw_id=#{withdraw_id}
+	</update>
+
+	<select id="getMemberWithdraws" parameterType="memberWithdrawBean" resultType="memberWithdrawBean">
+		select a.*,b.shop_name,b.shop_account from tst_member_withdraw as a
+		left join tst_shop as b
+		on a.member_id=b.member_id
+		
+		where a.is_delete='0'
+		
+		<if test=' withdraw_state != null and withdraw_state != "" '>
+			and FIND_IN_SET(withdraw_state,#{withdraw_state})
+		</if>
+		order by a.create_time desc
+	</select>
+	
+	<select id="getMemberWithdrawDetail" parameterType="memberWithdrawBean" resultType="Map">
+		select a.withdraw_id,a.withdraw_price,b.wx_open_id openid 
+		from tst_member_withdraw  as a
+		inner join tst_member as b
+		on a.member_id=b.member_id 
+		where a.is_delete='0' and a.withdraw_id=#{withdraw_id}
+	</select>
+	
+	<update id="updateMemberWithdraw" parameterType="memberWithdrawBean">
+		update tst_member_withdraw
+		set update_time=now()
+		<if test=' withdraw_state != null and withdraw_state != "" '>
+			,withdraw_state=#{withdraw_state}
+		</if>
+		<if test=' partner_trade_no != null and partner_trade_no != "" '>
+			,partner_trade_no=#{partner_trade_no}
+		</if>
+		where withdraw_id=#{withdraw_id}
+	</update>
+
+	<insert id="insertMemberBill" parameterType="memberBillBean">
+		insert into tst_member_bill
+		(member_id,bill_desc,bill_type,
+		bill_value,create_time,update_time)
+		values
+		(#{member_id},#{bill_desc},#{bill_type},
+		#{bill_value},now(),now())
+	</insert>
+
+
+	<select id="getShops" parameterType="shopBean" resultType="shopBean">
+		select * from tst_shop
+		where is_delete='0'
+		<if test=' shop_name != null and shop_name != "" '>
+			and shop_name like concat('%',#{shop_name},'%')
+		</if>
+		<if test=' shop_account != null and shop_account != "" '>
+			and shop_account like concat('%',#{shop_account},'%')
+		</if>
+		<if test=' shop_address != null and shop_address != "" '>
+			and shop_address like concat('%',#{shop_address},'%')
+		</if>
+		order by create_time desc
+	</select>
+	
+	<select id="getShopDetail" parameterType="shopBean" resultType="shopBean">
+		select * from tst_shop
+		where shop_id=#{shop_id}
+	</select>
+	
+	<update id="updateShop" parameterType="shopBean">
+		update tst_shop
+		set update_time=now()
+		<if test=' apply_state != null and apply_state != "" '>
+			,apply_state=#{apply_state}
+		</if>
+		<if test=' shop_name != null and shop_name != "" '>
+			,shop_name=#{shop_name}
+		</if>
+		<if test=' shop_img != null and shop_img != "" '>
+			,shop_img=#{shop_img}
+		</if>
+		<if test=' shop_address != null and shop_address != "" '>
+			,shop_address=#{shop_address}
+		</if>
+		<if test=' shop_account != null and shop_account != "" '>
+			,shop_account=#{shop_account}
+		</if>
+		<if test=' shop_phone != null and shop_phone != "" '>
+			,shop_phone=#{shop_phone}
+		</if>
+		<if test=' is_lock != null and is_lock != "" '>
+			,is_lock=#{is_lock}
+		</if>
+		where shop_id=#{shop_id}
+	</update>
+	<insert id="insertShop" parameterType="shopBean" useGeneratedKeys="true" keyProperty="shop_id">
+		insert into tst_shop
+		(member_id,shop_name,shop_img,shop_address,
+		shop_account,shop_phone,create_time,update_time)
+		values
+		(#{member_id},#{shop_name},#{shop_img},#{shop_address},
+		#{shop_account},#{shop_phone},now(),now())
+	</insert>
+	
+	<update id="examineMemberRelaname" parameterType="realnameBean">
+		update tst_member_realname
+		set update_time=now(),
+		realname_state=#{realname_state}
+		where realname_id=#{realname_id}
+	</update>
+	
+	<select id="getMemberRealnames" parameterType="realnameBean" resultType="realnameBean">
+		select * from tst_member_realname
+		where is_delete='0'
+		order by create_time desc
+	</select>
+
+    <select id="getMemberDetail" parameterType="memberBean" resultType="memberBean">
+         select a.*,b.realname_state from tst_member as a
+        left join tst_member_realname as b
+        on a.member_id=b.member_id and b.is_delete='0'
+        where a.is_delete = '0' and a.member_id=#{member_id}
+    </select>
+
+    <select id="getMembers" parameterType="memberBean" resultType="memberBean">
+        select a.*,IFNULL(b.realname_state,"")realname_state from tst_member as a
+        left join tst_member_realname as b
+        on a.member_id=b.member_id and b.is_delete='0'
+        where a.is_delete = '0'
+        <if test=' member_nick_name != null and member_nick_name != "" '>
+        	and member_nick_name like concat('%',#{member_nick_name},'%')
+        </if>
+        <if test=' member_account != null and member_account != "" '>
+        	and member_account like concat('%',#{member_account},'%')
+        </if>
+        <if test=' member_type != null and member_type != "" '>
+        	and member_type = #{member_type}
+        </if>
+        <if test=' start_time != null and start_time != "" '>
+        	and a.create_time > #{start_time}
+        </if>
+        <if test=' end_time != null and end_time != "" '>
+        	and #{end_time} > a.create_time
+        </if>
+        order by create_time desc
+    </select>
+
+    <update id="deleteMember" parameterType="memberBean">
+        update tst_member
+        set is_delete = '1'
+        where FIND_IN_SET(member_id, #{member_ids})
+    </update>
+
+    <update id="updateMember" parameterType="memberBean">
+        update tst_member
+        set update_time=now()
+
+		<if test=' member_type != null and member_type != "" '>
+            ,member_type = #{member_type}
+        </if>
+        <if test=' shop_id != null and shop_id != "" '>
+            ,shop_id = #{shop_id}
+        </if>
+        
+      	<if test=' member_state != null and member_state != "" '>
+            ,member_state = #{member_state}
+        </if>
+        
+        <if test=' member_img != null and member_img != "" '>
+            ,member_img = #{member_img}
+        </if>
+        <if test=' member_nick_name != null and member_nick_name != "" '>
+            ,member_nick_name = #{member_nick_name}
+        </if>
+        where  member_id=#{member_id}
+    </update>
+    
+    
+    <update id="updateMemberBalance" parameterType="memberBean">
+        update tst_member
+        set update_time=now()
+		,member_balance=member_balance+#{member_balance}
+		,settle_balance=settle_balance+#{member_balance}
+        where  member_id=#{member_id}
+    </update>
+</mapper>

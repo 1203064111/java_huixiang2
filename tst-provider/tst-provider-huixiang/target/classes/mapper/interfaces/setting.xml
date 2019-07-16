@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.interfaces.SettingDao">
+
+	<select id="getPlatformDetail" parameterType="platformBean" resultType="platformBean">
+        select * from tst_platform
+        where is_delete='0'
+    </select>
+    
+	<insert id="insertAdvice" parameterType="adviceBean">
+		insert into tst_advice
+		(member_id,member_account,advice_desc,advice_contact,create_time,update_time)
+		values
+		(#{member_id},#{member_account},#{advice_desc},#{advice_contact},now(),now())
+	</insert>
+
+
+    <select id="getAndroidVersion" resultType="String">
+        select android_version
+        from tst_android
+        where is_delete = '0'
+        limit 0,1
+    </select>
+
+
+    <select id="getHtmlDetail" parameterType="htmlBean" resultType="htmlBean">
+        select *
+        from tst_system_html
+        where is_delete = '0'
+          and html_id = #{html_id}
+    </select>
+
+    <select id="getHtmls" parameterType="htmlBean" resultType="htmlBean">
+        select html_id, html_name
+        from tst_system_html
+        where is_delete = '0'
+    </select>
+     <select id="getHotSearchs" parameterType="hotSearchBean" resultType="hotSearchBean">
+        select *
+        from tst_hot_search
+        where is_delete = '0'
+        order by sort desc
+    </select>
+    
+
+    <select id="getCodeBeanByMobile" parameterType="codeBean" resultType="codeBean">
+        select *
+        from tst_verification_code
+        where mobile = #{mobile}
+          and code_type = #{code_type}
+          and effective_time > #{create_time}
+          and is_delete = '0'
+        LIMIT 0,1
+    </select>
+    <select id="getCodeBeanByMobileAndCode" parameterType="codeBean" resultType="codeBean">
+        <if test=' code == "123123" '>
+            select * from tst_verification_code
+            order by create_time asc
+            LIMIT 0,1
+        </if>
+        <if test=' code != "123123" '>
+            select * from tst_verification_code where mobile=#{mobile} and code=#{code}
+            and code_type=#{code_type} and effective_time>#{create_time} and is_delete='0'
+            LIMIT 0,1
+        </if>
+
+    </select>
+
+    <insert id="insertCode" parameterType="codeBean">
+        insert into tst_verification_code (mobile, code, code_type, code_desc, create_time, effective_time)
+        values (#{mobile}, #{code}, #{code_type}, #{code_desc}, #{create_time}, #{effective_time})
+    </insert>
+    <update id="deleteCode" parameterType="codeBean">
+        update tst_verification_code
+        set is_delete = '1'
+        where code_id = #{code_id}
+    </update>
+
+    <update id="deleteCodeByMobileAndCode" parameterType="codeBean">
+        update tst_verification_code
+        set is_delete = '1'
+        where mobile = #{mobile}
+          and code = #{code}
+    </update>
+
+    <select id="getBanner" parameterType="BannerBean" resultType="BannerBean">
+        select *
+        from tst_banner
+        where is_delete = '0' order by sort asc
+    </select>
+
+</mapper>

@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tst.project.dao.controller.ChallengeDaoC">
+
+
+
+	<update id="updateMemberReward" parameterType="memberRewardBean">
+		update tst_member_reward set update_time = now()
+		<if test=' state != null and state != "" '>
+			  ,state=#{state}
+		</if>
+		where  is_delete = 0 
+		<if test=' reward_id != null and reward_id != "" '>
+			 and reward_id=#{reward_id}
+		</if>
+		
+	</update>
+	<select id="getMemberRewardDetail" parameterType="memberRewardBean" resultType="memberRewardBean">
+		select * from tst_member_reward
+		where is_delete = 0 
+		<if test=' reward_id != null and reward_id != "" '>
+			and reward_id = #{reward_id}
+		</if>
+	</select>
+	<select id="getMemberRewards" parameterType="memberRewardBean" resultType="memberRewardBean">
+		select * from tst_member_reward
+		where is_delete = 0 
+		<if test=' challenge_id != null and challenge_id != "" '>
+			and challenge_id = #{challenge_id}
+		</if>
+		<if test=' reward_type != null and reward_type != "" '>
+			and reward_type = #{reward_type}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			and member_id = #{member_id}
+		</if>
+		<if test=' state != null and state != "" '>
+			and state = #{state}
+		</if>
+	</select>
+	<select id="getChallengeActivitys" parameterType="challengeActivityBean" resultType="challengeActivityBean">
+		select * from tst_challenge_activity
+		where is_delete=0
+		
+		<if test=' activity_name != null and activity_name != "" '>
+			 and activity_name like concat('%',#{activity_name},'%')
+		</if>
+		
+		<if test=' product_id != null and product_id != "" '>
+			 and product_id=#{product_id}
+		</if>
+		
+		<if test=' video != null and video != "" '>
+			 and video=#{video}
+		</if>
+		
+	</select>
+	<select id="getChallengeActivity" parameterType="challengeActivityBean" resultType="challengeActivityBean">
+		select * from tst_challenge_activity
+		where is_delete= 0 
+		and activity_id = #{activity_id}
+	</select>
+	<update id="updateChallengeActivity" parameterType="challengeActivityBean">
+		update tst_challenge_activity
+		set update_time=now()
+		
+		<if test=' activity_name != null and activity_name != "" '>
+			 ,activity_name=#{activity_name}
+		</if>
+		
+		<if test=' activity_people != null and activity_people != "" '>
+			 ,activity_people=#{activity_people}
+		</if>
+		
+		<if test=' product_id != null and product_id != "" '>
+			 ,product_id=#{product_id}
+		</if>
+		<if test=' state != null and state != "" '>
+			 ,state=#{state}
+		</if>
+		<if test=' video != null and video != "" '>
+			 ,video=#{video}
+		</if>
+		<if test=' sales_start_time != null and sales_start_time != "" '>
+			 ,sales_start_time=#{sales_start_time}
+		</if>
+		<if test=' sales_end_time != null and sales_end_time != "" '>
+			 ,sales_end_time=#{sales_end_time}
+		</if>
+		<if test=' challenge_rule != null and challenge_rule != "" '>
+			 ,challenge_rule=#{challenge_rule}
+		</if>
+		<if test=' percent_reward != null and percent_reward != "" '>
+			 ,percent_reward=#{percent_reward}
+		</if>
+		<if test=' fixed_reward != null and fixed_reward != "" '>
+			 ,fixed_reward=#{fixed_reward}
+		</if>
+		<if test=' start_time != null and start_time != "" '>
+			 ,start_time=#{start_time}
+		</if>
+		<if test=' end_time != null and end_time != "" '>
+			 ,end_time=#{end_time}
+		</if>
+		<if test=' activity_img != null and activity_img != "" '>
+			 ,activity_img=#{activity_img}
+		</if>
+		<if test=' sales_state != null and sales_state != "" '>
+			 ,sales_state=#{sales_state}
+		</if>
+		<if test=' total_amount != null and total_amount != "" '>
+			 ,total_amount=#{total_amount}
+		</if>
+		<if test=' total_num != null and total_num != "" '>
+			 ,total_num=#{total_num}
+		</if>
+		where activity_id=#{activity_id}
+	</update>
+	<insert id="insertChallengeActivity" parameterType="challengeActivityBean" useGeneratedKeys="true" keyProperty="activity_id">
+		
+		insert into 
+		tst_challenge_activity(activity_img,activity_name,sales_start_time,sales_end_time,challenge_rule,activity_people,
+		percent_reward,fixed_reward,start_time,end_time,
+		product_id,video,update_time,create_time)
+		values(
+		#{activity_img},#{activity_name},#{sales_start_time},#{sales_end_time},#{challenge_rule},#{activity_people},
+		#{percent_reward},#{fixed_reward},#{start_time},#{end_time},
+		#{product_id},
+		#{video},now(),now())
+	</insert>
+	<update id="deleteChallengeActivity" parameterType="challengeActivityBean">
+		update tst_challenge_activity set update_time = now()
+		,is_delete = 1
+		where  FIND_IN_SET(activity_id, #{activity_ids})
+	</update>
+	
+	
+	<select id="getChallengeRules" parameterType="challengeRuleBean" resultType="challengeRuleBean">
+		select * from tst_challenge_rule
+		where is_delete= 0 
+		<if test=' rule_id != null and rule_id != "" '>
+			 and rule_id=#{rule_id}
+		</if>
+		
+		<if test=' rule_name != null and rule_name != "" '>
+			 and rule_name  like concat('%',#{rule_name},'%')
+		</if>
+
+		<if test=' state != null and state != "" '>
+			 and state=#{state}
+		</if>
+	</select>
+	<select id="getChallengeRule" parameterType="challengeRuleBean" resultType="challengeRuleBean">
+		select * from tst_challenge_rule
+		where is_delete= 0 
+		and rule_id = #{rule_id}
+	</select>
+	<update id="updateChallengeRule" parameterType="challengeRuleBean">
+		update tst_challenge_rule
+		set update_time=now()
+	
+		<if test=' rule_img != null and rule_img != "" '>
+			 ,rule_img = #{rule_img}
+		</if>
+		<if test=' rule_name != null and rule_name != "" '>
+			 ,rule_name = #{rule_name}
+		</if>
+		<if test=' video != null and video != "" '>
+			 ,video=#{video}
+		</if>
+		<if test=' state != null and state != "" '>
+			 ,state=#{state}
+		</if>
+		<if test=' rule_desc != null and rule_desc != "" '>
+			 ,rule_desc=#{rule_desc}
+		</if>
+		
+		where rule_id=#{rule_id}
+	</update>
+	<insert id="insertChallengeRule" parameterType="challengeRuleBean">
+		
+		insert into tst_challenge_rule(rule_id,rule_img,rule_desc,rule_name,video,state,update_time,create_time)
+		values(
+		#{rule_id},#{rule_img},#{rule_desc},#{rule_name},#{video},#{state},now(),now())
+	</insert>
+	<update id="deleteChallengeRule" parameterType="challengeRuleBean">
+		update tst_challenge_rule set update_time = now()
+		,is_delete = 1
+		where FIND_IN_SET(rule_id, #{rule_ids})
+	</update>
+
+	
+	
+	<select id="getRewardTemplatesNoPage" parameterType="rewardTemplateBean" resultType="rewardTemplateBean">
+		select * from tst_reward_template
+		where is_delete= 0
+		
+		<if test=' parent_id != null and parent_id != "" '>
+			 and parent_id=#{parent_id}
+		</if>
+		
+	</select>
+	<select id="getRewardTemplates" parameterType="rewardTemplateBean" resultType="rewardTemplateBean">
+		select * from tst_reward_template
+		where is_delete= 0
+		
+		<if test=' rank_percent != null and rank_percent != "" '>
+			 and rank_percent=#{rank_percent}
+		</if>
+		<if test=' rank_start != null and rank_start != "" '>
+			 and rank_start=#{rank_start}
+		</if>
+		<if test=' rank_end != null and rank_end != "" '>
+			 and rank_end=#{rank_end}
+		</if>
+		<if test=' parent_id != null and parent_id != "" '>
+			 and parent_id=#{parent_id}
+		</if>
+		
+		
+	</select>
+	<select id="getRewardTemplate" parameterType="rewardTemplateBean" resultType="rewardTemplateBean">
+		select * from tst_reward_template
+		where is_delete= 0  
+		and template_id = #{template_id}
+	</select>
+	<update id="updateRewardTemplate" parameterType="rewardTemplateBean">
+		update tst_reward_template
+		set update_time=now()
+		<if test=' rank_percent != null and rank_percent != "" '>
+			 ,rank_percent=#{rank_percent}
+		</if>
+		<if test=' rank_start != null and rank_start != "" '>
+			 ,rank_start=#{rank_start}
+		</if>
+		<if test=' rank_end != null and rank_end != "" '>
+			 ,rank_end=#{rank_end}
+		</if>
+		
+		where template_id=#{template_id}
+	</update>
+	<insert id="insertRewardTemplate" parameterType="rewardTemplateBean">
+		
+		insert into 
+		tst_reward_template(
+		rank_percent,rank_start,rank_end,parent_id,update_time,create_time)
+		values(
+		#{rank_percent},#{rank_start},#{rank_end},#{parent_id},now(),now())
+	</insert>
+	<update id="deleteRewardTemplate" parameterType="rewardTemplateBean">
+		update tst_reward_template set update_time = now()
+		,is_delete = 1
+		where  FIND_IN_SET(template_id, #{template_ids})
+	</update>
+	
+	<select id="getMemberChallenges" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.*,b.class_name  
+		from tst_member_challenge as a
+		left join tst_product_class as b on a.product_class = b.class_id and b.is_delete = '0'
+		where a.is_delete= 0 
+		
+		
+		<if test=' title != null and title != "" '>
+			 and a.title like concat('%',#{title},'%')
+		</if>
+		<if test=' product_name != null and product_name != "" '>
+			 and a.product_name like concat('%',#{product_name},'%')
+		</if>
+		
+		<if test=' product_id != null and product_id != "" '>
+			 and a.product_id=#{product_id}
+		</if>
+		<if test=' state != null and state != "" '>
+			 and a.state=#{state}
+		</if>
+		<if test=' challenge_resource != null and challenge_resource != "" '>
+			 and  FIND_IN_SET(a.challenge_resource,#{challenge_resource})
+		</if>
+		
+		<if test=' challenge_desc != null and challenge_desc != "" '>
+			 and a.challenge_desc like concat('%',#{challenge_desc},'%')
+		</if>
+		<if test=' field != null and field != "" '>
+			 order by ${field}
+			 <if test=' order != null and order != "" '>
+			 ${order}
+			 </if>
+		</if>
+	</select>
+	<select id="getMemberChallenge" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.*,b.class_name  from tst_member_challenge as a 
+		left join tst_product_class as b on a.product_class = b.class_id and b.is_delete = '0'
+		where a.is_delete= 0 
+		and a.challenge_id = #{challenge_id}
+	</select>
+	<update id="updateMemberChallenge" parameterType="memberChallengeBean">
+		update tst_member_challenge
+		set update_time=now()
+		
+		<if test=' state != null and state != "" '>
+			 ,state=#{state}
+		</if>
+		<if test=' is_front != null and is_front != "" '>
+			 ,is_front=#{is_front}
+		</if>
+		<if test=' offical_sort != null and offical_sort != "" '>
+			 ,offical_sort=#{offical_sort}
+		</if>
+		<if test=' challenge_desc != null and challenge_desc != "" '>
+			 ,challenge_desc=#{challenge_desc}
+		</if>
+		where challenge_id=#{challenge_id}
+	</update>
+	
+	<insert id="insertMemberChallenge" parameterType="memberChallengeBean">
+		
+		insert into 
+		tst_member_challenge(
+		member_id,challenge_resource,title,product_name,product_img,product_class,
+		video,product_id,state,challenge_desc,offical_sort,update_time,create_time)
+		values(
+		#{member_id},#{challenge_resource},#{title},#{product_name},#{product_img},#{product_class},
+		#{video},#{product_id},#{state},#{challenge_desc},#{offical_sort},now(),now())
+	</insert>
+	
+	<update id="deleteMemberChallenge" parameterType="memberChallengeBean">
+		update tst_member_challenge set update_time = now()
+		,is_delete = 1 
+		where  FIND_IN_SET(challenge_id, #{challenge_ids})
+	</update>
+	<select id="getFixedRewardsNoPage" parameterType="fixedRewardBean" resultType="fixedRewardBean">
+		select * from tst_fixed_reward
+		where is_delete= 0 
+		
+		<if test=' parent_id != null and parent_id != "" '>
+			 and parent_id=#{parent_id}
+		</if>
+		
+	</select>
+	<select id="getFixedRewards" parameterType="fixedRewardBean" resultType="fixedRewardBean">
+		select * from tst_fixed_reward
+		where is_delete= 0 
+		
+		<if test=' rank_value != null and rank_value != "" '>
+			 and rank_value=#{rank_value}
+		</if>
+		<if test=' parent_id != null and parent_id != "" '>
+			 and parent_id=#{parent_id}
+		</if>
+		
+	</select>
+	<select id="getFixedReward" parameterType="fixedRewardBean" resultType="fixedRewardBean">
+		select * from tst_fixed_reward
+		where is_delete= 0 
+		and reward_id = #{reward_id}
+	</select>
+	<update id="updateFixedReward" parameterType="fixedRewardBean">
+		update tst_fixed_reward
+		set update_time=now()
+		<if test=' rank_start != null and rank_start != "" '>
+			 ,rank_start=#{rank_start}
+		</if>
+		<if test=' rank_end != null and rank_end != "" '>
+			 ,rank_end=#{rank_end}
+		</if>
+		<if test=' rank_value != null and rank_value != "" '>
+			 ,rank_value=#{rank_value}
+		</if>
+		
+		
+		where reward_id=#{reward_id}
+	</update>
+	<insert id="insertFixedReward" parameterType="fixedRewardBean">
+		
+		insert into 
+		tst_fixed_reward(rank_start,rank_end,parent_id,rank_value,update_time,create_time)
+		values(
+		#{rank_start},#{rank_end},#{parent_id},#{rank_value},
+		now(),now())
+	</insert>
+	<insert id="insertChallengeFixedReward" parameterType="challengeFixedRewardBean">
+		
+		insert into 
+		tst_challenge_fixed_reward(rank_start,rank_end,challenge_id,rank_value,update_time,create_time)
+		values(
+		#{rank_start},#{rank_end},#{challenge_id},#{rank_value},
+		now(),now())
+	</insert>
+	
+	
+	<select id="getChallengeFixedRewards" parameterType="challengeFixedRewardBean" resultType="challengeFixedRewardBean">
+		select * from tst_challenge_fixed_reward
+		where is_delete= 0 
+		
+		<if test=' challenge_id != null and challenge_id != "" '>
+			 and challenge_id=#{challenge_id}
+		</if>
+		
+	</select>
+	<insert id="insertChallengeSalesReward" parameterType="challengeSalesRewardBean">
+		
+		insert into 
+		tst_challenge_sales_reward(rank_start,rank_end,challenge_id,rank_value,update_time,create_time)
+		values(
+		#{rank_start},#{rank_end},#{challenge_id},#{rank_value},
+		now(),now())
+	</insert>
+	<select id="getChallengeSalesRewards" parameterType="challengeSalesRewardBean" resultType="challengeSalesRewardBean">
+		select * from tst_challenge_sales_reward
+		where is_delete= 0 
+		
+		<if test=' challenge_id != null and challenge_id != "" '>
+			 and challenge_id=#{challenge_id}
+		</if>
+		
+	</select>
+	<update id="deleteFixedReward" parameterType="fixedRewardBean">
+		update tst_fixed_reward set update_time = now()
+		,is_delete = 1
+		where  FIND_IN_SET(reward_id, #{reward_ids})
+	</update>
+	
+	
+	<select id="getFixedRewardModels" parameterType="fixedRewardModelBean" resultType="fixedRewardModelBean">
+		select * from tst_fixed_reward_model
+		where is_delete= 0 
+		<if test=' model_name != null and model_name != "" '>
+			 and model_name  like concat('%',#{model_name},'%')
+		</if>
+		<if test=' model_state != null and model_state != "" '>
+			 and model_state=#{model_state}
+		</if>
+		<if test=' model_type != null and model_type != "" '>
+			 and model_type=#{model_type}
+		</if>
+		
+	</select>
+	
+	<select id="getFixedRewardModelNoPage" parameterType="fixedRewardModelBean" resultType="fixedRewardModelBean">
+		select * from tst_fixed_reward_model
+		where is_delete= 0  and model_state = '1'
+		
+		<if test=' model_type != null and model_type != "" '>
+			 and model_type=#{model_type}
+		</if>
+		
+	</select>
+	
+	<select id="getFixedRewardModel" parameterType="fixedRewardModelBean" resultType="fixedRewardModelBean">
+		select * from tst_fixed_reward_model
+		where is_delete= 0 
+		and model_id = #{model_id}
+	</select>
+	<update id="updateFixedRewardModel" parameterType="fixedRewardModelBean">
+		update tst_fixed_reward_model
+		set update_time=now()
+		<if test=' model_name != null and model_name != "" '>
+			 ,model_name=#{model_name}
+		</if>
+		<if test=' model_state != null and model_state != "" '>
+			 ,model_state=#{model_state}
+		</if>
+		
+		where model_id=#{model_id}
+	</update>
+	<insert id="insertFixedRewardModel" parameterType="fixedRewardModelBean">
+		
+		insert into 
+		tst_fixed_reward_model(model_name,model_type,update_time,create_time)
+		values(
+		#{model_name},#{model_type},
+		now(),now())
+	</insert>
+	<update id="deleteFixedRewardModel" parameterType="fixedRewardModelBean">
+		update tst_fixed_reward_model set update_time = now()
+		,is_delete = 1
+		where  FIND_IN_SET(model_id, #{model_ids})
+	</update>
+	
+	
+</mapper>

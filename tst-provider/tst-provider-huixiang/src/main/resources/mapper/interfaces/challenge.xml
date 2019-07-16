@@ -1,0 +1,689 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tst.project.dao.interfaces.ChallengeDao">
+
+
+	
+	<select id="getMemberRankByProductAndTime" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.challenge_id,a.title,a.challenge_desc,a.video,a.product_id,a.product_img,a.product_name,a.member_id,a.good_num,
+		c.product_origin_price as product_price,c.product_sales as product_sales,
+		b.member_nick_name as member_name,b.member_img as member_img  from tst_member_challenge as a
+		left join tst_member as b
+		on a.member_id = b.member_id
+		left join tst_product as c
+		on c.product_id = a.product_id
+		where a.is_delete= 0  and a.state = '1' and a.challenge_resource = 'member'
+		<if test=' product_id != null and product_id != "" '>
+			 and a.product_id=#{product_id}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			 and a.member_id=#{member_id}
+		</if>
+		<if test=' sales_start_time != null and sales_start_time != "" '>
+			 and a.create_time > #{sales_start_time}
+		</if>
+		group by a.member_id  order by a.good_num  desc  limit 0,1
+		
+	</select>
+	<select id="getMemberRank" parameterType="memberChallengeBean" resultType="Map">
+		select a.challenge_id
+		from tst_member_challenge as a
+		where a.is_delete= 0  and a.state = '1' and a.challenge_resource = 'member'
+		<if test=' product_id != null and product_id != "" '>
+			 and a.product_id=#{product_id}
+		</if>
+		<if test=' sales_start_time != null and sales_start_time != "" '>
+			 and a.create_time > #{sales_start_time}
+		</if>
+		group by a.member_id order by a.good_num  desc 
+		
+	</select>
+	<select id="getCurrentTopTenMemberChallenges" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.challenge_id,a.title,a.challenge_desc,a.video,a.product_id,a.product_img,a.product_name,a.member_id,a.good_num,
+		c.product_origin_price as product_price,c.product_sales as product_sales,
+		b.member_nick_name as member_name,b.member_img as member_img  from tst_member_challenge as a
+		left join tst_member as b
+		on a.member_id = b.member_id
+		left join tst_product as c
+		on c.product_id = a.product_id
+		where a.is_delete= 0  and a.state = '1' and a.challenge_resource = 'member'
+		<if test=' product_id != null and product_id != "" '>
+			 and a.product_id=#{product_id}
+		</if>
+		<if test=' sales_start_time != null and sales_start_time != "" '>
+			 and a.create_time > #{sales_start_time}
+		</if>
+		group by a.member_id order by a.good_num  desc limit 0,10
+		
+	</select>
+	
+	<select id="getProductSalesAmount" parameterType="challengeActivityBean" resultType="Map">
+		select IFNULL(sum(a.specification_price),0) as total,count(*) as num from tst_order_product  as a 
+		inner join tst_order as b on b.order_id =a.order_id 
+		where a.is_delete ='0' and b.is_delete ='0'
+		and b.order_state != 'cancel' and b.order_state != 'wait_pay'
+		and b.order_type = 'app' 
+		<if test=' sales_start_time != null and sales_start_time != "" '>
+			and a.create_time > #{sales_start_time}
+		</if>
+		<if test=' sales_end_time != null and sales_end_time != "" '>
+			and  #{sales_end_time} > a.create_time
+		</if>
+		<if test=' product_id != null and product_id != "" '>
+			and   a.product_id  = #{product_id} 
+		</if>
+		
+	</select>
+	
+	
+	<select id="getMemberChallengeByWell" parameterType="memberChallengeBean" resultType="Map">
+		select  member_id from tst_member_challenge
+		where is_delete = 0  and challenge_resource = 'member' and state = '1'
+		<if test=' product_id != null and product_id != "" '>
+			and product_id = #{product_id}
+		</if>
+		<if test=' sales_start_time != null and sales_start_time != "" '>
+			and create_time > #{sales_start_time}
+		</if>
+		<if test=' sales_end_time != null and sales_end_time != "" '>
+			and #{sales_end_time} > create_time
+		</if>
+		group by member_id order by good_num desc  limit 0,100
+	</select>
+	<select id="getMemberRewards" resultType="memberRewardBean">
+		select * from tst_member_reward
+		where is_delete = 0 
+		<if test=' challenge_id != null and challenge_id != "" '>
+			and challenge_id = #{challenge_id}
+		</if>
+		<if test=' reward_type != null and reward_type != "" '>
+			and reward_type = #{reward_type}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			and member_id = #{member_id}
+		</if>
+		<if test=' state != null and state != "" '>
+			and state = #{state}
+		</if>
+	</select>
+	<update id="updateMemberReward" parameterType="memberRewardBean">
+		update tst_member_reward set update_time = now()
+		<if test=' state != null and state != "" '>
+			  ,state=#{state}
+		</if>
+		where  is_delete = 0 
+		<if test=' reward_id != null and reward_id != "" '>
+			 and reward_id=#{reward_id}
+		</if>
+		
+	</update>
+	
+	
+	<insert id="insertMemberReward" parameterType="memberRewardBean">
+		insert into 
+		tst_member_reward(rank,reward_type,reward_value,member_id,challenge_id,
+		update_time,create_time)
+		values(
+		#{rank},#{reward_type},#{reward_value},#{member_id},#{challenge_id},
+		now(),now())
+	</insert>
+	
+	
+	<select id="getWaitPayChallenges" resultType="challengeActivityBean">
+		select * from tst_challenge_activity
+		where sales_state='0' and now()>sales_end_time and is_delete='0'
+	</select>
+	<select id="getMemberLableDetail" parameterType="memberLableBean" resultType="memberLableBean">
+		select * from tst_member_lable
+		where is_delete= 0 
+		<if test=' lable_id != null and lable_id != "" '>
+			 and lable_id=#{lable_id}
+		</if>
+		<if test=' product_class_id != null and product_class_id != "" '>
+			 and product_class_id=#{product_class_id}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			 and member_id=#{member_id}
+		</if>
+		limit 0,1
+	</select>
+	<update id="updateMemberLable" parameterType="memberLableBean">
+		update tst_member_lable set update_time = now()
+		<if test=' lable_grade != null and lable_grade != "" '>
+			  ,lable_grade=#{lable_grade}
+		</if>
+		where  is_delete = 0 
+		<if test=' lable_id != null and lable_id != "" '>
+			 and lable_id=#{lable_id}
+		</if>
+		<if test=' product_class_id != null and product_class_id != "" '>
+			 and product_class_id=#{product_class_id}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			 and member_id=#{member_id}
+		</if>
+		
+	</update>
+	<insert id="insertMemberLable" parameterType="memberLableBean">
+		insert into 
+		tst_member_lable(member_id,product_class_id,lable_grade,
+		update_time,create_time)
+		values(
+		#{member_id},#{product_class_id},#{lable_grade},
+		now(),now())
+	</insert>
+	<insert id="insertChallengeFollow" parameterType="challengeFollowBean">
+		insert into 
+		tst_challenge_follow(member_id,parent_member_id,
+		update_time,create_time)
+		values(
+		#{member_id},#{parent_member_id},
+		now(),now())
+	</insert>
+	<update id="deleteChallengeFollow" parameterType="challengeFollowBean">
+		update tst_challenge_follow set update_time = now()
+		,is_delete = 1
+		where  1=1 
+		<if test=' member_id != null and member_id != "" '>
+			 and member_id=#{member_id}
+		</if>
+		<if test=' parent_member_id != null and parent_member_id != "" '>
+			 and parent_member_id=#{parent_member_id}
+		</if>
+	</update>
+	<insert id="insertChallengeComment" parameterType="challengeCommentBean">
+		insert into 
+		tst_challenge_comment(member_id,challenge_id,comment_desc,
+		update_time,create_time)
+		values(
+		#{member_id},#{challenge_id},#{comment_desc},
+		now(),now())
+	</insert>
+	<select id="getChallengeComments" parameterType="challengeCommentBean" resultType="challengeCommentBean">
+		select a.*,b.member_nick_name as member_name,b.member_img as member_img from tst_challenge_comment as a 
+		left join tst_member as b 
+		on a.member_id =b.member_id 
+		where a.is_delete= 0 and  a.challenge_id = #{challenge_id}
+	</select>
+	
+	<select id="getChallengeCollectionDetail" parameterType="challengeCollectionBean" resultType="challengeCollectionBean">
+		select * from tst_challenge_collection
+		where is_delete= 0 
+		<if test=' challenge_id != null and challenge_id != "" '>
+			 and challenge_id=#{challenge_id}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			 and member_id=#{member_id}
+		</if>
+		limit 0,1
+	</select>
+	<select id="getChallengeFollowDetail" parameterType="challengeFollowBean" resultType="challengeFollowBean">
+		select * from tst_challenge_follow
+		where is_delete= 0 
+		<if test=' member_id != null and member_id != "" '>
+			 and member_id=#{member_id}
+		</if>
+		<if test=' parent_member_id != null and parent_member_id != "" '>
+			 and parent_member_id=#{parent_member_id}
+		</if>
+		limit 0,1
+	</select>
+	
+	
+	<insert id="insertChallengeCollection" parameterType="challengeCollectionBean">
+		insert into 
+		tst_challenge_collection(member_id,challenge_id,
+		update_time,create_time)
+		values(
+		#{member_id},#{challenge_id},
+		now(),now())
+	</insert>
+	<update id="deleteChallengeCollection" parameterType="challengeCollectionBean">
+		update tst_challenge_collection set update_time = now()
+		,is_delete = 1
+		where  1=1 
+		<if test=' collection_id != null and collection_id != "" '>
+			 and collection_id=#{collection_id}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			 and member_id=#{member_id}
+		</if>
+		<if test=' challenge_id != null and challenge_id != "" '>
+			 and challenge_id=#{challenge_id}
+		</if>
+	</update>
+	<insert id="insertChallengeShare" parameterType="challengeShareBean">
+		insert into 
+		tst_challenge_share(member_id,challenge_id,
+		update_time,create_time)
+		values(
+		#{member_id},#{challenge_id},
+		now(),now())
+	</insert>
+	<insert id="insertChallengeWell" parameterType="challengeWellBean">
+		insert into 
+		tst_challenge_well(member_id,challenge_id,wx_code,qq_code,wb_code,fb_code,tw_code,
+		update_time,create_time)
+		values(
+		#{member_id},#{challenge_id},#{wx_code},#{qq_code},#{wb_code},#{fb_code},#{tw_code},
+		now(),now())
+	</insert>
+	<select id="getChallengeWellDetail" parameterType="challengeWellBean" resultType="challengeWellBean">
+		select * from tst_challenge_well
+		where is_delete= 0 
+		<if test=' challenge_id != null and challenge_id != "" '>
+			 and challenge_id=#{challenge_id}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			 and member_id=#{member_id}
+		</if>
+		<if test=' wx_code != null and wx_code != "" '>
+			 and wx_code=#{wx_code}
+		</if>
+		<if test=' qq_code != null and qq_code != "" '>
+			 and qq_code=#{qq_code}
+		</if>
+		<if test=' fb_code != null and fb_code != "" '>
+			 and fb_code=#{fb_code}
+		</if>
+		<if test=' tw_code != null and tw_code != "" '>
+			 and tw_code=#{tw_code}
+		</if>
+		<if test=' wb_code != null and wb_code != "" '>
+			 and wb_code=#{wb_code}
+		</if>
+		
+		
+		limit 0,1
+	</select>
+	<update id="deleteChallengeWell" parameterType="challengeWellBean">
+		update tst_challenge_well set update_time = now()
+		,is_delete = 1
+		where  1=1 
+		<if test=' well_id != null and well_id != "" '>
+			 and well_id=#{well_id}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			 and member_id=#{member_id}
+		</if>
+		<if test=' challenge_id != null and challenge_id != "" '>
+			 and challenge_id=#{challenge_id}
+		</if>
+	</update>
+	<insert id="insertChallengeFootprint" parameterType="challengeFootprintBean">
+		insert into 
+		tst_challenge_footprint(member_id,challenge_id,
+		update_time,create_time)
+		values(
+		#{member_id},#{challenge_id},
+		now(),now())
+	</insert>
+	
+	<select id="getChallengeFootprintDetail" parameterType="challengeFootprintBean" resultType="challengeFootprintBean">
+		select * from tst_challenge_footprint
+		where is_delete= 0 
+		<if test=' challenge_id != null and challenge_id != "" '>
+			 and challenge_id=#{challenge_id}
+		</if>
+		<if test=' member_id != null and member_id != "" '>
+			 and member_id=#{member_id}
+		</if>
+		
+		limit 0,1
+	</select>
+	
+	<select id="getChallengeRules" parameterType="challengeRuleBean" resultType="challengeRuleBean">
+		select * from tst_challenge_rule
+		where is_delete= 0 and state = '1'
+		
+	</select>
+	<select id="getChallengeRuleDetail" parameterType="challengeRuleBean" resultType="challengeRuleBean">
+		select * from tst_challenge_rule
+		where is_delete= 0 
+		<if test=' rule_id != null and rule_id != "" '>
+			 and rule_id=#{rule_id}
+		</if>
+		limit 0,1
+		
+	</select>
+	<select id="getChallengeActivitys" parameterType="challengeActivityBean" resultType="challengeActivityBean">
+		select * from tst_challenge_activity
+		where is_delete= 0 and state = '1'
+		
+	</select>
+	<select id="getChallengeActivity" parameterType="challengeActivityBean" resultType="challengeActivityBean">
+		select * from tst_challenge_activity
+		where is_delete= 0 
+		<if test=' activity_id != null and activity_id != "" '>
+			 and activity_id=#{activity_id}
+		</if>
+		<if test=' product_id != null and product_id != "" '>
+			 and product_id=#{product_id}
+		</if>
+		limit 0,1
+	</select>
+	<select id="getCurrentChallengeActivity" parameterType="challengeActivityBean" resultType="challengeActivityBean">
+		select * from tst_challenge_activity
+		where is_delete= 0 and state = '1'
+		and end_time > now() 
+		and now() > start_time
+		limit 0,1
+	</select>
+	<select id="getNextChallengeActivity" parameterType="challengeActivityBean" resultType="challengeActivityBean">
+		select * from tst_challenge_activity
+		where is_delete= 0 and state = '1'
+		and start_time > now() 
+		order by start_time asc
+		limit 0,1
+	</select>
+	
+	<select id="getMemberChallengesIsFront" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select * from tst_member_challenge
+		where is_delete= 0  and state = '1' and is_front = '1'
+		
+		
+		<if test=' title != null and title != "" '>
+			 and title=#{title}
+		</if>
+		<if test=' product_name != null and product_name != "" '>
+			 and product_name=#{product_name}
+		</if>
+		
+		<if test=' product_class != null and product_class != "" '>
+			 and product_class=#{product_class}
+		</if>
+		
+		<if test=' product_id != null and product_id != "" '>
+			 and product_id=#{product_id}
+		</if>
+		
+		
+	</select>
+	
+	<select id="getMemberChallengesByFront" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.challenge_id,a.title,a.challenge_desc,a.video,a.product_id,a.product_img,a.product_name,a.member_id,a.product_class,
+		a.good_num,a.comment_num,a.offical_sort,
+		b.member_nick_name as member_name,b.member_img as member_img  from tst_member_challenge as a
+		left join tst_member as b
+		on a.member_id = b.member_id
+		where a.is_delete= 0  and a.state = '1' 
+		<!-- <if test=' member_id != null and member_id != "" '>
+			and not exists(select 1 from tst_challenge_footprint as m where m.member_id = #{member_id} and m.challenge_id = a.challenge_id  )
+		</if> -->
+		
+		order by ( a.good_num * ${good_set} + 
+		a.comment_num * ${comment_set} + 
+		a.offical_sort + 
+		<if test=' member_id != null and member_id != "" '>
+			(select (case when count(*) > 0  then -100 else 0 end ) as weight from tst_challenge_footprint as m where m.member_id = ${member_id} and m.challenge_id = a.challenge_id  ) +
+		</if> 
+		
+		(SELECT FLOOR(RAND() * 100)) 
+		)  
+		desc
+		
+	</select>
+	<select id="getMemberChallengesByProdClass" parameterType="memberChallengeBean" resultType="Map">
+		select a.challenge_id,a.good_num,a.comment_num,a.offical_sort  from tst_member_challenge as a
+		where a.is_delete= 0  and a.state = '1'
+		<if test=' product_class != null and product_class != "" '>
+			 and a.product_class=#{product_class}
+		</if>
+		order by ( a.good_num * ${good_set} + 
+		a.comment_num * ${comment_set} + 
+		a.offical_sort + 
+		(SELECT FLOOR(RAND() * 100)) )  desc
+		
+	</select>
+	<select id="getMemberChallengesByHeight" parameterType="memberChallengeBean" resultType="Map">
+		select a.challenge_id,a.good_num,a.comment_num,a.offical_sort  from tst_member_challenge as a
+		where a.is_delete= 0  and a.state = '1'
+		<if test=' product_class != null and product_class != "" '>
+			 and a.product_class=#{product_class}
+		</if>
+		order by ( a.good_num * ${good_set} + 
+		a.comment_num * ${comment_set} + 
+		a.offical_sort + 
+		(SELECT FLOOR(RAND() * 100)) )  desc
+		
+	</select>
+	<select id="getMemberChallengesByHeightTest" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.challenge_id,a.title,a.challenge_desc,a.video,a.product_id,a.product_img,a.product_name,a.member_id,a.product_class,
+		a.good_num,a.comment_num,a.offical_sort,
+		b.member_nick_name as member_name,b.member_img as member_img  from tst_member_challenge as a
+		left join tst_member as b
+		on a.member_id = b.member_id
+		where a.is_delete= 0  and a.state = '1'
+		order by ( a.good_num * ${good_set} + 
+		a.comment_num * ${comment_set} + 
+		a.offical_sort + 
+		(SELECT FLOOR(RAND() * 100)) 
+		<!-- <if test=' member_id != null and member_id != "" '>
+		(select ifNull(b.lable_grade,0) from tst_member_lable as b where b.product_class_id = a.product_class and b.member_id = #{member_id}) * ${lable_set}
+		</if> -->
+		)  
+		desc
+		
+	</select>
+	<select id="getMemberChallengesByWidth" parameterType="memberChallengeBean" resultType="Map">
+		select a.challenge_id,a.title,a.challenge_desc,a.video,a.product_id,a.product_img,a.product_name,a.member_id,a.product_class,
+		a.good_num,a.comment_num,a.offical_sort,
+		b.member_nick_name as member_name,b.member_img as member_img  from tst_member_challenge as a
+		left join tst_member as b
+		on a.member_id = b.member_id
+		where a.is_delete= 0  and a.state = '1'
+		<if test=' product_class != null and product_class != "" '>
+			 and a.product_class=#{product_class}
+		</if>
+		order by ( a.good_num * ${good_set} + 
+		a.comment_num * ${comment_set} + 
+		a.offical_sort + 
+		(SELECT FLOOR(RAND() * 100)) 
+		<!-- <if test=' member_id != null and member_id != "" '>
+		(select ifNull(b.lable_grade,0) from tst_member_lable as b where b.product_class_id = a.product_class and b.member_id = #{member_id}) * ${lable_set}
+		</if> -->
+		)  
+		desc
+		
+		
+	</select>
+	<select id="getMemberChallengesByWidthTest" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.challenge_id,a.good_num,a.comment_num,a.offical_sort from tst_member_challenge as a
+		where a.is_delete= 0  and a.state = '1'
+		<if test=' product_class != null and product_class != "" '>
+			 and a.product_class=#{product_class}
+		</if>
+		order by ( a.good_num * ${good_set} + 
+		a.comment_num * ${comment_set} + 
+		a.offical_sort + 
+		(SELECT FLOOR(RAND() * 100)) )  desc
+		
+	</select>
+	
+	<select id="getMemberChallengesByClass" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.challenge_id,a.title,a.challenge_desc,a.video,a.product_id,a.product_img,a.product_name,a.member_id,a.product_class,
+		c.product_origin_price as product_price,c.product_sales as product_sales,
+		a.good_num,a.comment_num,a.offical_sort,
+		b.member_nick_name as member_name,b.member_img as member_img  from tst_member_challenge as a
+		left join tst_member as b
+		on a.member_id = b.member_id
+		left join tst_product as c 
+		on c.product_id = a.product_id
+		where a.is_delete= 0  and a.state = '1'
+		<if test=' product_class != null and product_class != "" '>
+			 and product_class=#{product_class}
+		</if>
+		order by ( a.good_num * ${good_set} + 
+		a.comment_num * ${comment_set} + 
+		a.offical_sort + 
+		(SELECT FLOOR(RAND() * 100)) )  desc
+		
+	</select>
+	<select id="getMemberChallenges" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.challenge_id,a.title,a.challenge_desc,a.video,a.product_id,a.product_img,a.product_name,a.member_id,a.product_class,
+		c.product_origin_price as product_price,c.product_sales as product_sales,
+		a.good_num,a.comment_num,a.offical_sort,
+		b.member_nick_name as member_name,b.member_img as member_img from tst_member_challenge as a 
+		left join tst_member as b
+		on a.member_id = b.member_id
+		left join tst_product as c 
+		on c.product_id = a.product_id
+		where a.is_delete= 0  and a.state = '1'
+		<if test=' member_id != null and member_id != "" '>
+			 and a.member_id=#{member_id}
+		</if>
+		
+		<if test=' title != null and title != "" '>
+			 and a.title=#{title}
+		</if>
+		<if test=' product_name != null and product_name != "" '>
+			 and a.product_name=#{product_name}
+		</if>
+		
+		<if test=' product_class != null and product_class != "" '>
+			 and a.product_class=#{product_class}
+		</if>
+		
+		<if test=' product_id != null and product_id != "" '>
+			 and a.product_id=#{product_id}
+		</if>
+		<if test=' challenge_resource != null and challenge_resource != "" '>
+			 and a.challenge_resource=#{challenge_resource}
+		</if>
+		
+		<if test=' challenge_desc != null and challenge_desc != "" '>
+			 and a.challenge_desc=#{challenge_desc}
+		</if>
+		
+	</select>
+	
+	<select id="getMemberChallengesByRank" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.challenge_id,a.title,a.challenge_desc,a.video,a.product_id,a.product_img,a.product_name,a.member_id,a.product_class,
+		a.good_num,a.comment_num,a.offical_sort,
+		b.member_nick_name as member_name,b.member_img as member_img from tst_member_challenge as a 
+		left join tst_member as b
+		on a.member_id = b.member_id
+		where a.is_delete= 0  and a.state = '1'
+		<if test=' member_id != null and member_id != "" '>
+			 and a.member_id=#{member_id}
+		</if>
+		
+		<if test=' title != null and title != "" '>
+			 and a.title=#{title}
+		</if>
+		<if test=' product_name != null and product_name != "" '>
+			 and a.product_name=#{product_name}
+		</if>
+		
+		<if test=' product_class != null and product_class != "" '>
+			 and a.product_class=#{product_class}
+		</if>
+		
+		<if test=' product_id != null and product_id != "" '>
+			 and a.product_id=#{product_id}
+		</if>
+		
+		<if test=' challenge_desc != null and challenge_desc != "" '>
+			 and a.challenge_desc=#{challenge_desc}
+		</if>
+		
+	</select>
+	<select id="getMemberChallenge" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.*,b.member_nick_name as member_name,b.member_img as member_img,b.fans_num as member_fans,
+		(case when c.collection_id != '' then 1 else 0 end ) as is_collection,
+		(case when d.well_id != '' then 1 else 0 end ) as is_good,
+		(case when e.follow_id != '' then 1 else 0 end ) as is_follow,
+		f.product_origin_price as product_price,f.product_sales as product_sales
+		from tst_member_challenge as a 
+		left join tst_member as b
+		on a.member_id = b.member_id
+		left join tst_challenge_collection as c
+		on c.challenge_id = a.challenge_id
+		and c.is_delete = 0 
+		<if test=' member_id != null and member_id != "" '>
+			and c.member_id = #{member_id}
+		</if> 
+		left join tst_challenge_well as d
+		on d.challenge_id = a.challenge_id
+		and d.is_delete = 0 
+		<if test=' member_id != null and member_id != "" '>
+			and d.member_id = #{member_id}
+		</if> 
+		left join tst_challenge_follow as e
+		on e.parent_member_id = a.member_id
+		and e.is_delete = 0 
+		<if test=' member_id != null and member_id != "" '>
+			and e.member_id = #{member_id}
+		</if> 
+		left join tst_product as f
+		on f.product_id = a.product_id
+		where a.is_delete= 0  and a.state = '1'
+		and a.challenge_id = #{challenge_id}
+		limit 0,1
+	</select>
+	<select id="getMemberChallengeDetail" parameterType="memberChallengeBean" resultType="memberChallengeBean">
+		select a.* from tst_member_challenge as a 
+		where a.is_delete= 0  
+		and a.challenge_id = #{challenge_id}
+	</select>
+	<update id="updateMemberChallenge" parameterType="memberChallengeBean">
+		update tst_member_challenge
+		set update_time=now()
+		<if test=' good_num != null   '>
+			 ,good_num=#{good_num}
+		</if>
+		<if test=' comment_num != null   '>
+			 ,comment_num=#{comment_num}
+		</if>
+	
+		<if test=' collection_num != null  '>
+			 ,collection_num=#{collection_num}
+		</if>
+		<if test=' title != null and title != "" '>
+			 ,title=#{title}
+		</if>
+		<if test=' product_name != null and product_name != "" '>
+			 ,product_name=#{product_name}
+		</if>
+	
+		<if test=' product_class != null and product_class != "" '>
+			 ,product_class=#{product_class}
+		</if>
+		
+		<if test=' product_id != null and product_id != "" '>
+			 ,product_id=#{product_id}
+		</if>
+		<if test=' product_img != null and product_img != "" '>
+			 ,product_img=#{product_img}
+		</if>
+		
+		<if test=' state != null and state != "" '>
+			 ,state=#{state}
+		</if>
+		<if test=' challenge_desc != null and challenge_desc != "" '>
+			 ,challenge_desc=#{challenge_desc}
+		</if>
+		<if test=' share_num != null   '>
+			 ,share_num=#{share_num}
+		</if>
+		
+		where challenge_id=#{challenge_id}
+	</update>
+	<insert id="insertMemberChallenge" parameterType="memberChallengeBean">
+		
+		insert into 
+		tst_member_challenge(member_id,challenge_rule,title,product_name,product_img,video,challenge_resource,
+		product_class,product_id,challenge_desc,shop_id,create_time,update_time)
+		values(
+		#{member_id},#{challenge_rule},#{title},#{product_name},#{product_img},#{video},#{challenge_resource},
+		#{product_class},#{product_id},#{challenge_desc},#{shop_id},
+		now(),now())
+	</insert>
+	<update id="deleteMemberChallenge" parameterType="memberChallengeBean">
+		update tst_member_challenge set update_time = now()
+		,is_delete = 1
+		where FIND_IN_SET(challenge_id, #{challenge_id})
+	</update>
+
+</mapper>

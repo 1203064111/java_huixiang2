@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tst.project.dao.controller.SystemDao">
+
+
+    <update id="updateRoleAuthority" parameterType="moudleBean">
+        update tst_system_role
+        set update_time = now(),
+            moudle_ids  = #{moudle_ids}
+        where role_id = #{role_id}
+    </update>
+
+    <insert id="insertRoleAuthority" parameterType="moudleBean">
+        insert into tst_system_role_moudle (role_id, moudle_id, create_time, moudle_parent_uuid)
+        values (#{role_id}, #{moudle_id}, now(), #{moudle_parent_uuid})
+    </insert>
+
+    <select id='getRoleAuthoritys' parameterType="moudleBean" resultType="moudleBean">
+        <!-- select a.*,(case when b.role_moudle_id is null then '0' else '1' end) is_authority,#{role_id} as role_id
+        from tst_system_moudle as a
+        left join tst_system_role_moudle as b
+        on a.moudle_id=b.moudle_id and b.role_id=#{role_id} and b.is_delete='0'
+        where a.is_delete='0' and parent_id=#{parent_id}
+        and moudle_type=#{moudle_type}
+        order by a.sort asc -->
+
+        select a.*,(case when b.role_id is null then '0' else '1' end) is_authority,#{role_id} as role_id
+        from tst_system_moudle as a
+
+        left join tst_system_role as b
+        on FIND_IN_SET(a.moudle_id,b.moudle_ids) and b.role_id=#{role_id} and b.is_delete='0'
+
+        where a.is_delete='0' and moudle_url is not null and moudle_url != ""
+
+        order by a.sort desc
+    </select>
+
+    <update id="deleteSystemRole" parameterType="roleBean">
+        update tst_system_role
+        set is_delete = '1'
+        where FIND_IN_SET(role_id, #{role_ids})
+    </update>
+
+    <update id="updateSystemRole" parameterType="roleBean">
+        update tst_system_role
+        set update_time = now(),
+            role_name   = #{role_name},
+            role_type   = #{role_type}
+        where role_id = #{role_id}
+    </update>
+
+    <insert id="insertSystemRole" parameterType="roleBean">
+        insert into tst_system_role (role_name, role_type, merchants_id, create_time, update_time)
+        values (#{role_name}, #{role_type}, IFNULL(#{merchants_id}, "-1"), now(), now())
+    </insert>
+    <select id="getSystemRoleDetail" parameterType="roleBean" resultType="roleBean">
+        select *
+        from tst_system_role
+        where is_delete = '0'
+          and role_id = #{role_id}
+    </select>
+
+    <select id="getSystemRoles" parameterType="roleBean" resultType="roleBean">
+        select * from tst_system_role
+        where is_delete='0'
+        <if test=' merchants_id != null and merchants_id != "" '>
+            and merchants_id=#{merchants_id}
+        </if>
+        order by create_time desc
+    </select>
+
+    <select id="getSystemRolesNoPage" parameterType="roleBean" resultType="roleBean">
+        select * from tst_system_role
+        where is_delete='0'
+        <if test=' role_type != null and role_type != "" '>
+            and role_type=#{role_type}
+        </if>
+        <if test=' merchants_id != null and merchants_id != "" '>
+            and merchants_id=#{merchants_id}
+        </if>
+        order by create_time desc
+    </select>
+
+    <update id="deleteSystemAccount" parameterType="systemAccountBean">
+        update tst_system_account
+        set is_delete = '1'
+        where FIND_IN_SET(account_id, #{account_ids})
+    </update>
+
+    <update id="updateSystemAccount" parameterType="systemAccountBean">
+        update tst_system_account
+        set update_time=now()
+        <if test=' system_name != null and system_name != "" '>
+            ,system_name=#{system_name}
+        </if>
+        <if test=' system_img != null and system_img != "" '>
+            ,system_img=#{system_img}
+        </if>
+        <if test=' system_account != null and system_account != "" '>
+            ,system_account=#{system_account}
+        </if>
+        <if test=' system_token != null and system_token != "" '>
+            ,system_token=uuid()
+        </if>
+        <if test=' system_password != null and system_password != "" '>
+            ,system_password=#{system_password}
+            ,system_token=uuid()
+        </if>
+        <if test=' role_id != null and role_id != "" '>
+            ,role_id=#{role_id}
+        </if>
+        where account_id=#{account_id}
+    </update>
+
+    <update id="updateMerchantsAccount" parameterType="systemAccountBean">
+        update tst_system_account
+        set update_time    = now(),
+            merchants_name = #{merchants_name}
+        where merchants_id = #{merchants_id}
+    </update>
+    <insert id="insertSystemAccount" parameterType="systemAccountBean">
+        insert into tst_system_account (system_name,
+                                        system_account,
+                                        system_img,
+                                        system_password,
+                                        system_token,
+                                        system_type,
+                                        role_id,
+                                        create_time,
+                                        update_time,
+                                        merchants_id,
+                                        merchants_name,
+                                        system_remark)
+        values (#{system_name},
+                #{system_account},
+                #{system_img},
+                #{system_password},
+                #{system_token},
+                #{system_type},
+                #{role_id},
+                now(),
+                now(),
+                #{merchants_id},
+                '',
+                #{system_remark})
+    </insert>
+
+    <select id="getSystemAccounts" parameterType="systemAccountBean" resultType="systemAccountBean">
+        select a.*,d.role_name from tst_system_account as a
+
+        left join tst_system_role as d
+        on a.role_id=d.role_id
+
+        where a.is_delete='0'
+        <if test=' system_type != null and system_type != "" '>
+            and a.system_type=#{system_type}
+        </if>
+        order by a.create_time desc
+    </select>
+
+    <insert id="insertMoudle" parameterType="moudleBean">
+        insert into tst_system_moudle (moudle_name,
+                                       moudle_url,
+                                       parent_id,
+                                       sort,
+                                       moudle_remark,
+                                       create_time,
+                                       update_time,
+                                       moudle_uuid,
+                                       moudle_parent_uuid,
+                                       moudle_type)
+        values (#{moudle_name},
+                #{moudle_url},
+                #{parent_id},
+                #{sort},
+                #{moudle_remark},
+                now(),
+                now(),
+                #{moudle_uuid},
+                CONCAT(case
+                           when (select a.moudle_parent_uuid
+                                 from (select moudle_parent_uuid
+                                       from tst_system_moudle
+                                       where moudle_id = #{parent_id}) a) is null then ""
+                           else (select a.moudle_parent_uuid
+                                 from (select moudle_parent_uuid
+                                       from tst_system_moudle
+                                       where moudle_id = #{parent_id}) a) end, "#", #{moudle_uuid}),
+                #{moudle_type})
+    </insert>
+
+    <update id="updateMoudle" parameterType="moudleBean">
+        update tst_system_moudle
+        set moudle_name   = #{moudle_name},
+            moudle_url    = #{moudle_url},
+            sort          = #{sort},
+            moudle_remark = #{moudle_remark},
+            moudle_type   = #{moudle_type}
+        where moudle_id = #{moudle_id}
+    </update>
+
+    <update id="deleteMoudle" parameterType="moudleBean">
+        update tst_system_moudle
+        set is_delete = '1'
+        where FIND_IN_SET(moudle_id, #{moudle_ids})
+    </update>
+
+    <select id="getMoudleDetail" parameterType="moudleBean" resultType="moudleBean">
+        select *
+        from tst_system_moudle
+
+        where 1 = 1
+          and is_delete = '0'
+          and moudle_id = #{moudle_id}
+    </select>
+
+    <select id="getMoudles" parameterType="moudleBean" resultType="moudleBean">
+        select *
+        from tst_system_moudle
+
+        where 1 = 1
+          and is_delete = '0'
+          and parent_id = #{parent_id}
+
+        order by sort desc
+    </select>
+
+    <select id="getAccountDetail" parameterType="systemAccountBean" resultType="systemAccountBean">
+        select * from tst_system_account
+        where 1=1
+        <if test='account_id != null and account_id != "" '>
+            and account_id=#{account_id}
+        </if>
+        <if test='system_account != null and system_account != "" '>
+            and system_account=#{system_account}
+        </if>
+    </select>
+
+    <resultMap id="moudleList" type="moudleBean">
+        <result column="moudle_id" property="moudle_id"/>
+        <result column="moudle_name" property="moudle_name"/>
+        <result column="moudle_url" property="moudle_url"/>
+        <result column="parent_id" property="parent_id"/>
+        <result column="moudle_remark" property="moudle_remark"/>
+        <association property="menuBeans" resultMap="moudleList2">
+        </association>
+    </resultMap>
+
+    <resultMap id="moudleList2" type="moudleBean">
+        <result column="moudle_id2" property="moudle_id"/>
+        <result column="moudle_name2" property="moudle_name"/>
+        <result column="moudle_url2" property="moudle_url"/>
+        <result column="parent_id2" property="parent_id"/>
+        <result column="moudle_remark2" property="moudle_remark"/>
+        <association property="menuBeans" resultMap="moudleList3">
+        </association>
+    </resultMap>
+
+    <resultMap id="moudleList3" type="moudleBean">
+        <result column="moudle_id3" property="moudle_id"/>
+        <result column="moudle_name3" property="moudle_name"/>
+        <result column="moudle_url3" property="moudle_url"/>
+        <result column="parent_id3" property="parent_id"/>
+        <result column="moudle_remark3" property="moudle_remark"/>
+    </resultMap>
+
+    <select id="getRoleMoudles" parameterType="moudleBean" resultMap="moudleList">
+        select *
+        from (select (case when d.moudle_id is null then c.moudle_id else d.moudle_id end)moudle_id,
+                     (case when d.moudle_id is null then c.moudle_name else d.moudle_name end)moudle_name,
+                     (case when d.moudle_id is null then c.moudle_url else d.moudle_url end)moudle_url,
+                     (case when d.moudle_id is null then c.parent_id else d.parent_id end)parent_id,
+                     (case
+                          when d.moudle_id is null then c.moudle_remark
+                          else d.moudle_remark end)moudle_remark,
+                     (case when d.moudle_id is null then c.sort else d.sort end)sort,
+                     (case when d.moudle_id is null then b.moudle_id else c.moudle_id end)moudle_id2,
+                     (case when d.moudle_id is null then b.moudle_name else c.moudle_name end)moudle_name2,
+                     (case when d.moudle_id is null then b.moudle_url else c.moudle_url end)moudle_url2,
+                     (case when d.moudle_id is null then b.parent_id else c.parent_id end)parent_id2,
+                     (case
+                          when d.moudle_id is null then b.moudle_remark
+                          else c.moudle_remark end)moudle_remark2,
+                     (case when d.sort is null then b.sort else c.sort end)sort2,
+                     (case when d.moudle_id is null then null else b.moudle_id end)moudle_id3,
+                     (case when d.moudle_id is null then null else b.moudle_name end)moudle_name3,
+                     (case when d.moudle_id is null then null else b.moudle_url end)moudle_url3,
+                     (case when d.moudle_id is null then null else b.parent_id end)parent_id3,
+                     (case when d.moudle_id is null then null else b.moudle_remark end)moudle_remark3,
+                     (case when d.moudle_id is null then null else b.sort end)sort3
+
+              from tst_system_role as a
+                       inner join tst_system_moudle as b on FIND_IN_SET(b.moudle_id, a.moudle_ids) and b.is_delete = '0'
+                       left join tst_system_moudle as c on b.parent_id = c.moudle_id and c.is_delete = '0'
+                       left join tst_system_moudle as d on c.parent_id = d.moudle_id and d.is_delete = '0'
+
+              where a.role_id = #{role_id}
+                and a.is_delete = '0') as a
+        order by a.sort desc, a.sort2 desc, a.sort3 desc
+    </select>
+
+    <select id="systemLogin" parameterType="systemAccountBean" resultType="systemAccountBean">
+        select a.*
+        from tst_system_account as a
+        where a.system_account = #{system_account}
+          and a.is_delete = '0'
+        limit 0,1
+    </select>
+
+    <update id="updateSystemAccountDetail" parameterType="systemAccountBean">
+        update tst_system_account
+        set update_time=now()
+        <if test=' system_token != null and system_token != "" '>
+            ,system_token=#{system_token}
+        </if>
+        where 1=1
+        <if test=' account_id != null and account_id != "" '>
+            and account_id=#{account_id}
+        </if>
+    </update>
+
+    <select id="getBanner" parameterType="BannerBean" resultType="BannerBean">
+        select *
+        from tst_banner
+        where is_delete = '0' order by sort asc
+    </select>
+
+    <insert id="insertBanner" parameterType="BannerBean">
+        insert into tst_banner (banner_title, banner_img, banner_type, sort, create_time, update_time, banner_url,product_id)
+        values (#{banner_title}, #{banner_img}, #{banner_type}, #{sort}, now(), now(), #{banner_url},#{product_id})
+    </insert>
+
+    <update id="updateBanner" parameterType="BannerBean">
+        update tst_banner
+        set banner_title = #{banner_title},
+            banner_img   = #{banner_img},
+            banner_type  = #{banner_type},
+            sort         = #{sort},
+            update_time  = now(),
+            banner_url   = #{banner_url},
+            product_id   = #{product_id}
+        where banner_id = #{banner_id}
+          and is_delete = '0'
+    </update>
+
+    <update id="deleteBanner" parameterType="BannerBean">
+        update tst_banner
+        set update_time = now(),
+            is_delete   = '1'
+        where FIND_IN_SET(banner_id, #{banner_ids})
+    </update>
+
+    <select id="getBannerDetail" parameterType="BannerBean" resultType="BannerBean">
+        select a.*,b.product_name from tst_banner as a
+        left join tst_product as b
+        on a.product_id=b.product_id
+        where a.is_delete = '0'
+        and a.banner_id = #{banner_id}
+    </select>
+</mapper>

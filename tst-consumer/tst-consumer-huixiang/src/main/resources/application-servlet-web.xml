@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context" xmlns:aop="http://www.springframework.org/schema/aop" xmlns:p="http://www.springframework.org/schema/p" xmlns:tx="http://www.springframework.org/schema/tx" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+           http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-4.0.xsd
+           http://www.springframework.org/schema/aop
+		   http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+           http://www.springframework.org/schema/mvc
+           http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+		   ">
+	<!-- 配置文件加载 -->
+	<context:property-placeholder location="classpath:base-info.properties" />
+
+	<mvc:default-servlet-handler />
+	
+	<aop:aspectj-autoproxy proxy-target-class="true"/>
+
+	<!-- 开启注解 -->
+	<context:component-scan base-package="tst" use-default-filters="false">
+		<context:include-filter type="aspectj" expression="*..controller.*Controller" />
+		<context:include-filter type="aspectj" expression="*..interfaces.*Interfaces" />
+	</context:component-scan>
+
+	<mvc:annotation-driven conversion-service="conversionService">
+        <mvc:message-converters register-defaults="true" >
+			<bean class="org.springframework.http.converter.StringHttpMessageConverter" />
+			<ref bean="jsonConverter"></ref>
+        </mvc:message-converters>
+    </mvc:annotation-driven>
+    
+    <bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+		<property name="converters">
+			<set>
+				<bean class="tst.project.converter.DateConverter"></bean>
+			</set>
+		</property>
+	</bean>
+
+	<bean id="jsonConverter"
+		  class="com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter">
+		<property name="supportedMediaTypes" value="application/json;charset=UTF-8"/>
+		<property name="fastJsonConfig" >
+			<bean class="com.alibaba.fastjson.support.config.FastJsonConfig">
+				<property name="serializerFeatures">
+					<array value-type="com.alibaba.fastjson.serializer.SerializerFeature">
+						<value>DisableCircularReferenceDetect</value>
+						<value>WriteMapNullValue</value>
+						<value>WriteNullStringAsEmpty</value>
+						<value>WriteNullListAsEmpty</value>
+					</array>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<!--这段配置是用来设置循环解析的-->
+	<bean id="DisableCircularReferenceDetect" class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<property name="staticField" value="com.alibaba.fastjson.serializer.SerializerFeature.DisableCircularReferenceDetect"></property>
+	</bean>
+
+
+ <bean class="org.springframework.web.servlet.view.BeanNameViewResolver">
+        <property name="order" value="0"/>
+     </bean>
+	<!-- Resolve the view, declare the prefix and suffix -->
+	<bean id="jspVeiw" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="order" value="2" />
+		<property name="prefix" value="/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+</beans>
+

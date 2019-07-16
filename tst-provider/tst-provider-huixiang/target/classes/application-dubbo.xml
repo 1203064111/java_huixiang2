@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd   
+    http://code.alibabatech.com/schema/dubbo http://code.alibabatech.com/schema/dubbo/dubbo.xsd">
+
+    <!-- 配置文件加载 -->
+    <context:property-placeholder location="classpath:base-info.properties"/>
+
+    <!-- 提供方应用信息，用于计算依赖关系 -->
+    <dubbo:application name="${project_name}"/>
+    <!-- 使用zookeeper注册中心暴露服务地址 -->
+    <dubbo:registry address="${zookeeper.address}"/>
+
+    <!-- 多协议配置 -->
+    <dubbo:protocol name="dubbo" port="${dubbo.port}"/>
+    <!--<dubbo:protocol name="hessian" port="${duboo.hessian.port}"/> -->
+    <dubbo:consumer check="false" timeout="${dubbo.consumer.timeout}" retries="${dubbo.provider.retries}"/>
+
+    <dubbo:provider timeout="${dubbo.provider.timeout}"/> 
+    <!-- accepts="${dubbo.provider.accepts}"  threads="${dubbo.provider.threads}" -->
+	<!-- 声明需要暴露的服务接口 -->
+	
+	<dubbo:service interface="tst.project.controller.ISettingServiceC" ref="settingServiceC" delay="-1"/>
+	<dubbo:service interface="tst.project.controller.IGoodsServiceC" ref="goodsServiceC" delay="-1"/>
+	<dubbo:service interface="tst.project.controller.ISystemService" ref="systemService" delay="-1"/>
+    <dubbo:service interface="tst.project.controller.IRecordServiceC" ref="recordServiceC" delay="-1"/>
+    <dubbo:service interface="tst.project.controller.IMemberServiceC" ref="memberServiceC" delay="-1"/>
+	<dubbo:service interface="tst.project.controller.IOrderServiceC" ref="orderServiceC" delay="-1"/>
+	<dubbo:service interface="tst.project.controller.IDeviceServiceC" ref="deviceServiceC" delay="-1"/>
+	<dubbo:service interface="tst.project.controller.IChallengeServiceC" ref="challengeServiceC" delay="-1"/>
+
+    <dubbo:service interface="tst.project.interfaces.IAddressService" ref="addressService" delay="-1"/>
+    <dubbo:service interface="tst.project.interfaces.ISettingService" ref="settingService" delay="-1"/>
+    <dubbo:service interface="tst.project.interfaces.IMemberService" ref="memberService" delay="-1"/>
+    <dubbo:service interface="tst.project.interfaces.IProductService" ref="productService" delay="-1"/>
+    <dubbo:service interface="tst.project.interfaces.IOrderService" ref="orderService" delay="-1"/>
+    <dubbo:service interface="tst.project.interfaces.IProductCarService" ref="productCarService" delay="-1"/>
+    <dubbo:service interface="tst.project.interfaces.ICollectionService" ref="collectionService" delay="-1"/>
+    <dubbo:service interface="tst.project.interfaces.IDeviceService" ref="deviceService" delay="-1"/>
+    <dubbo:service interface="tst.project.interfaces.IChallengeService" ref="challengeService" delay="-1"/>
+</beans>
